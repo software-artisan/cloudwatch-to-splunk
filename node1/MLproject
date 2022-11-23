@@ -1,0 +1,11 @@
+name: docker-example
+
+docker_env:
+  image:  cloudwatch-to-splunk
+
+entry_points:
+  main:
+    parameters:
+      access_key_id: {type: string}
+      secret_access_key: {type: string}
+    command: "python3 get_logs.py --access-key-id={access_key_id} --secret-access-key={secret_access_key}"
