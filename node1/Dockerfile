@@ -57,3 +57,4 @@ RUN python3 -c "from transformers import pipeline; nlp = pipeline('sentiment-ana
 RUN python3 -c "from transformers import AutoTokenizer, AutoModelForTokenClassification; tokenizer = AutoTokenizer.from_pretrained('Jean-Baptiste/roberta-large-ner-english'); model = AutoModelForTokenClassification.from_pretrained('Jean-Baptiste/roberta-large-ner-english');"
 RUN ln -s /usr/bin/python3 /usr/bin/python
 ARG CACHEBUST=3
+RUN pip install boto3
