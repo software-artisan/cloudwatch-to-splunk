@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
-from time import time
-import boto3
-import os
-import sys
-import datetime
-import tzlocal
-import argparse
-
-
 try:
+    from time import time
+    import boto3
+    import os
+    import sys
+    import datetime
+    import tzlocal
+    import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--access_key_id', help='aws access key id', required=True)
     parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
