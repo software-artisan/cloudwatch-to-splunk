@@ -1,4 +1,4 @@
-name: docker-example
+name: cloudwatch-to-splunk
 
 docker_env:
   image:  cloudwatch-to-splunk
