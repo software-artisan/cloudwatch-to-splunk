@@ -19,7 +19,10 @@ try:
   paginator = client.get_paginator('describe_log_groups')
   nextToken = None
   while True:
-    page_iterator = paginator.paginate(limit=1000, nextToken=nextToken)
+    if nextToken:
+      page_iterator = paginator.paginate(limit=1000, nextToken=nextToken)
+    else:
+      page_iterator = paginator.paginate(limit=1000)
     print('aaaaaaaaaaaaaaaa', flush=True)
     for pg in page_iterator:
       print('pg=' + str(pg), flush=True)
