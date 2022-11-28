@@ -14,10 +14,10 @@ try:
     parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
 
     args = parser.parse_args()
-    print('Hello World', flush=True)
-    os._exit(os.EX_OK)
 
     client = boto3.client('logs', region_name='us-east-1', aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
+    print('Hello World', flush=True)
+    os._exit(os.EX_OK)
     paginator = client.get_paginator('describe_log_groups')
     for pg in paginator.paginate():
         for group in pg['logGroups']:
