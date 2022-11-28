@@ -17,8 +17,12 @@ try:
 
     client = boto3.client('logs', region_name='us-east-1', aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
     paginator = client.get_paginator('describe_log_groups')
-    for pg in paginator.paginate():
-        print('pg=' + str(pg))
+    page_iterator = paginator.paginate(includeLinkedAccounts=False):
+    print('aaaaaaaaaaaaaaaa', flush=True)
+    for pg in page_iterator:
+        print('pg=' + str(pg), flush=True)
+        for group in pg['logGroups']:
+            print(group['logGroupName'])
 except Exception as e1:
     print('Caught ' + str(e1), flush=True)
 os._exit(os.EX_OK)
