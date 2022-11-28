@@ -22,7 +22,7 @@ try:
     if nextToken:
       page_iterator = paginator.paginate(limit=1000, nextToken=nextToken)
     else:
-      page_iterator = paginator.paginate(limit=1000)
+      page_iterator = paginator.paginate(limit=50)
     print('aaaaaaaaaaaaaaaa', flush=True)
     for pg in page_iterator:
       print('pg=' + str(pg), flush=True)
