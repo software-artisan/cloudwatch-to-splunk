@@ -16,6 +16,7 @@ try:
 
   args = parser.parse_args()
 
+  open('/tmp/emptyfile', 'a').close()
   client = boto3.client('logs', region_name='us-east-1', aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
   paginator = client.get_paginator('describe_log_groups')
   nextToken = None
