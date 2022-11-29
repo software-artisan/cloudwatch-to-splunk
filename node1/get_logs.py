@@ -8,6 +8,7 @@ try:
   import datetime
   import tzlocal
   import argparse
+  from concurrent_plugin import concurrent_core
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--access_key_id', help='aws access key id', required=True)
@@ -20,16 +21,16 @@ try:
   nextToken = None
   while True:
     if nextToken:
-      page_iterator = paginator.paginate(limit=1000, nextToken=nextToken)
+      page_iterator = paginator.paginate(limit=50, nextToken=nextToken)
     else:
       page_iterator = paginator.paginate(limit=50)
-    print('aaaaaaaaaaaaaaaa', flush=True)
     for pg in page_iterator:
       print('pg=' + str(pg), flush=True)
       for group in pg['logGroups']:
           print(group['logGroupName'], flush=True)
     if 'NextToken' in page_iterator:
       nextToken = page_iterator['NextToken']
+      concurrent_core.concurrent_log_artifact("/tmp/emptyfile", "dummy", LogGroupName=group['logGroupName'])
     else:
       break
 except Exception as e1:
