@@ -27,10 +27,10 @@ try:
     for pg in page_iterator:
       print('pg=' + str(pg), flush=True)
       for group in pg['logGroups']:
-          print(group['logGroupName'], flush=True)
+        print(group['logGroupName'], flush=True)
+        concurrent_core.concurrent_log_artifact("/tmp/emptyfile", "dummy", LogGroupName=group['logGroupName'])
     if 'NextToken' in page_iterator:
       nextToken = page_iterator['NextToken']
-      concurrent_core.concurrent_log_artifact("/tmp/emptyfile", "dummy", LogGroupName=group['logGroupName'])
     else:
       break
 except Exception as e1:
