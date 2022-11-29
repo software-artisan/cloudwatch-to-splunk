@@ -16,10 +16,10 @@ try:
 
   args = parser.parse_args()
 
-  open('/tmp/emptyfile', 'a').close()
   client = boto3.client('logs', region_name='us-east-1', aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
   paginator = client.get_paginator('describe_log_groups')
   nextToken = None
+  ind = 0
   while True:
     if nextToken:
       page_iterator = paginator.paginate(limit=50, nextToken=nextToken)
@@ -29,7 +29,10 @@ try:
       print('pg=' + str(pg), flush=True)
       for group in pg['logGroups']:
         print(group['logGroupName'], flush=True)
-        concurrent_core.concurrent_log_artifact("/tmp/emptyfile", "dummy", LogGroupName=group['logGroupName'])
+        fn = '/tmp/emptyfile-' + str(ind)
+        open(fn, 'a').close()
+        ind = ind + 1
+        concurrent_core.concurrent_log_artifact(fn, "dummy", LogGroupName=group['logGroupName'])
     if 'NextToken' in page_iterator:
       nextToken = page_iterator['NextToken']
     else:
