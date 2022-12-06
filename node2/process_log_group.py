@@ -1,51 +1,5 @@
 #!/usr/bin/env python3
 
-try:
-  from time import time
-  import boto3
-  import os
-  import sys
-  import datetime
-  import tzlocal
-  import argparse
-  from concurrent_plugin import concurrent_core
-  from transformers import pipeline
-  from transformers import AutoTokenizer, AutoModelForTokenClassification
-
-  parser = argparse.ArgumentParser()
-  parser.add_argument('--access_key_id', help='aws access key id', required=True)
-  parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
-
-  args = parser.parse_args()
-
-  print('------------------------------ Begin Loading Huggingface ner model ------------------', flush=True)
-  try:
-    tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
-    model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
-  except Exception as err:
-    print('Caught ' + str(err) + ' while loading ner model')
-  print('------------------------------ After Loading Huggingface ner model ------------------', flush=True)
-
-  print('------------------------------ Begin Creating Huggingface ner pipeline ------------------', flush=True)
-  ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
-  print('------------------------------ After Creating Huggingface ner pipeline ------------------', flush=True)
-
-  client = boto3.client('logs', region_name='us-east-1', aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
-
-  df = concurrent_core.list(None)
-  print('Column Names:', flush=True)
-  cn = df.columns.values.tolist()
-  print(str(cn))
-  print('------------------------------ Start Input ----------------', flush=True)
-  for ind, row in df.iterrows():
-    print("Input row=" + str(row), flush=True)
-    process_log_group(client, ner, row['LogGroupName'])
-  print('------------------------------ Finished Input ----------------', flush=True)
-  os._exit(os.EX_OK)
-except Exception as e1:
-  print("Caught " + str(e1), flush=True)
-  os._exit(os.EX_OK)
-
 def process_one_log_stream_inner(client, ner, fp, group_name, stream_name):
     print(f'Dumping log stream inner: {fp.name}')
     nt = None
@@ -89,7 +43,7 @@ def process_one_log_stream(client, ner, stream_name, creation_time):
     with open('/tmp/' + fname, 'w') as fp:
         process_one_log_stream_inner(client, ner, fp, group_name, stream_name)
 
-def process_log_group(client, ner, log_group_name):
+def process_one_log_group(client, ner, log_group_name):
   nextToken = None
   while True:
     if nextToken:
@@ -105,3 +59,50 @@ def process_log_group(client, ner, log_group_name):
       nextToken = rv['nextToken']
     else:
       break
+
+try:
+  from time import time
+  import boto3
+  import os
+  import sys
+  import datetime
+  import tzlocal
+  import argparse
+  from concurrent_plugin import concurrent_core
+  from transformers import pipeline
+  from transformers import AutoTokenizer, AutoModelForTokenClassification
+
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--access_key_id', help='aws access key id', required=True)
+  parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
+
+  args = parser.parse_args()
+
+  print('------------------------------ Begin Loading Huggingface ner model ------------------', flush=True)
+  try:
+    tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
+    model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
+  except Exception as err:
+    print('Caught ' + str(err) + ' while loading ner model')
+  print('------------------------------ After Loading Huggingface ner model ------------------', flush=True)
+
+  print('------------------------------ Begin Creating Huggingface ner pipeline ------------------', flush=True)
+  ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
+  print('------------------------------ After Creating Huggingface ner pipeline ------------------', flush=True)
+
+  client = boto3.client('logs', region_name='us-east-1', aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
+
+  df = concurrent_core.list(None)
+  print('Column Names:', flush=True)
+  cn = df.columns.values.tolist()
+  print(str(cn))
+  print('------------------------------ Start Input ----------------', flush=True)
+  for ind, row in df.iterrows():
+    print("Input row=" + str(row), flush=True)
+    process_one_log_group(client, ner, row['LogGroupName'])
+  print('------------------------------ Finished Input ----------------', flush=True)
+  os._exit(os.EX_OK)
+except Exception as e1:
+  print("Caught " + str(e1), flush=True)
+  os._exit(os.EX_OK)
+
