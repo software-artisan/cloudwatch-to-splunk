@@ -47,9 +47,9 @@ def process_one_log_group(client, ner, log_group_name):
   nextToken = None
   while True:
     if nextToken:
-      rv = client.describe_log_streams(logGroupName=sys.argv[1], orderBy='LastEventTime', descending=True, limit=50, nextToken=nextToken)
+      rv = client.describe_log_streams(logGroupName=log_group_name, orderBy='LastEventTime', descending=True, limit=50, nextToken=nextToken)
     else:
-      rv = client.describe_log_streams(logGroupName=sys.argv[1], orderBy='LastEventTime', descending=True, limit=50)
+      rv = client.describe_log_streams(logGroupName=log_group_name, orderBy='LastEventTime', descending=True, limit=50)
     log_streams = rv['logStreams']
     for one_stream in log_streams:
       process_one_log_stream(client, ner, one_stream['logStreamName'], one_stream['creationTime'])
