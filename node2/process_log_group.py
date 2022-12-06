@@ -97,6 +97,7 @@ try:
   cn = df.columns.values.tolist()
   print(str(cn))
   print('------------------------------ Start Input ----------------', flush=True)
+  df.reset_index()
   for ind, row in df.iterrows():
     print("Input row=" + str(row), flush=True)
     process_one_log_group(client, ner, row['LogGroupName'])
