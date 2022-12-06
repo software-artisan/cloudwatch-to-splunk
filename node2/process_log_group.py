@@ -99,7 +99,9 @@ def process_log_group(client, ner, log_group_name):
     log_streams = rv['logStreams']
     for one_stream in log_streams:
       process_one_log_stream(client, ner, one_stream['logStreamName'], one_stream['creationTime'])
+      break
+    break
     if ('nextToken' in rv):
-        nextToken = rv['nextToken']
+      nextToken = rv['nextToken']
     else:
-        break
+      break
