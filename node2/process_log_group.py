@@ -9,6 +9,8 @@ try:
   import tzlocal
   import argparse
   from concurrent_plugin import concurrent_core
+  from transformers import pipeline
+  from transformers import AutoTokenizer, AutoModelForTokenClassification
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--access_key_id', help='aws access key id', required=True)
@@ -16,39 +18,88 @@ try:
 
   args = parser.parse_args()
 
+  print('------------------------------ Begin Loading Huggingface ner model ------------------', flush=True)
+  try:
+    tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
+    model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
+  except Exception as err:
+    print('Caught ' + str(err) + ' while loading ner model')
+  print('------------------------------ After Loading Huggingface ner model ------------------', flush=True)
+
+  print('------------------------------ Begin Creating Huggingface ner pipeline ------------------', flush=True)
+  ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
+  print('------------------------------ After Creating Huggingface ner pipeline ------------------', flush=True)
+
   client = boto3.client('logs', region_name='us-east-1', aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
 
   df = concurrent_core.list(None)
   print('Column Names:', flush=True)
   cn = df.columns.values.tolist()
   print(str(cn))
-  print('------------------------------ Obtained input info ----------------', flush=True)
+  print('------------------------------ Start Input ----------------', flush=True)
   for ind, row in df.iterrows():
-      print("Input row=" + str(row), flush=True)
-  print('------------------------------ Finished dump of input info ----------------', flush=True)
+    print("Input row=" + str(row), flush=True)
+    process_log_group(client, ner, row['LogGroupName'])
+  print('------------------------------ Finished Input ----------------', flush=True)
+  os._exit(os.EX_OK)
+except Exception as e1:
+  print("Caught " + str(e1), flush=True)
   os._exit(os.EX_OK)
 
+def process_one_log_stream_inner(client, ner, fp, group_name, stream_name):
+    print(f'Dumping log stream inner: {fp.name}')
+    nt = None
+    while (True):
+        print('.... nt=' + str(nt))
+        if nt:
+            resp = client.get_log_events(logGroupName=group_name, logStreamName=stream_name, startFromHead=False, nextToken=nt)
+        else:
+            resp = client.get_log_events(logGroupName=group_name, logStreamName=stream_name, startFromHead=True)
 
-  paginator = client.get_paginator('describe_log_groups')
+        events = resp['events']
+        for event in events:
+            dt = datetime.datetime.fromtimestamp(event['timestamp']/1000)
+            msg = event['message']
+            # fp.write(str(dt) + ' : ' + msg)
+            s = ner(msg)
+            orgs = []
+            persons = []
+            misc = []
+            for entry in s:
+              print("ner ret: Entry=" + str(entry))
+              if entry['entity_group'] == 'ORG':
+                orgs.append(entry['word'])
+              elif entry['entity_group'] == 'PER':
+                persons.append(entry['word'])
+              elif entry['entity_group'] == 'MISC':
+                misc.append(entry['word'])
+            print(str(dt) + ": orgs=" + str(orgs) + ", persons=" + str(persons) + ", misc=" + str(misc) + " : " + msg)
+        if ('nextForwardToken' in resp):
+          if nt == resp['nextForwardToken']:
+            break
+          else:
+            nt = resp['nextForwardToken']
+        else:
+          break
+
+def process_one_log_stream(client, ner, stream_name, creation_time):
+    datetime_local:datetime.datetime = datetime.datetime.fromtimestamp(creation_time/1000, tz=tzlocal.get_localzone())  #tz=datetime.timezone.utc
+    fname = (str(datetime_local) + '_' + stream_name ).replace("/","_").replace(" ","_")
+    print(f"Dumping log stream {stream_name} to file /tmp/{fname}", flush=True)
+    with open('/tmp/' + fname, 'w') as fp:
+        process_one_log_stream_inner(client, ner, fp, group_name, stream_name)
+
+def process_log_group(client, ner, log_group_name):
   nextToken = None
-  ind = 0
   while True:
     if nextToken:
-      page_iterator = paginator.paginate(limit=50, nextToken=nextToken)
+      rv = client.describe_log_streams(logGroupName=sys.argv[1], orderBy='LastEventTime', descending=True, limit=50, nextToken=nextToken)
     else:
-      page_iterator = paginator.paginate(limit=50)
-    for pg in page_iterator:
-      print('pg=' + str(pg), flush=True)
-      for group in pg['logGroups']:
-        print(group['logGroupName'], flush=True)
-        fn = '/tmp/emptyfile-' + str(ind)
-        open(fn, 'a').close()
-        ind = ind + 1
-        concurrent_core.concurrent_log_artifact(fn, "dummy", LogGroupName=group['logGroupName'])
-    if 'NextToken' in page_iterator:
-      nextToken = page_iterator['NextToken']
+      rv = client.describe_log_streams(logGroupName=sys.argv[1], orderBy='LastEventTime', descending=True, limit=50)
+    log_streams = rv['logStreams']
+    for one_stream in log_streams:
+      process_one_log_stream(client, ner, one_stream['logStreamName'], one_stream['creationTime'])
+    if ('nextToken' in rv):
+        nextToken = rv['nextToken']
     else:
-      break
-except Exception as e1:
-  print('Caught ' + str(e1), flush=True)
-os._exit(os.EX_OK)
+        break
