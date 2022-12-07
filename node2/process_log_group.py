@@ -36,12 +36,12 @@ def process_one_log_stream_inner(client, ner, fp, group_name, stream_name):
         else:
           break
 
-def process_one_log_stream(client, ner, stream_name, creation_time):
+def process_one_log_stream(client, ner, stream_name, log_group_name, creation_time):
     datetime_local:datetime.datetime = datetime.datetime.fromtimestamp(creation_time/1000, tz=tzlocal.get_localzone())  #tz=datetime.timezone.utc
     fname = (str(datetime_local) + '_' + stream_name ).replace("/","_").replace(" ","_")
     print(f"Dumping log stream {stream_name} to file /tmp/{fname}", flush=True)
     with open('/tmp/' + fname, 'w') as fp:
-        process_one_log_stream_inner(client, ner, fp, group_name, stream_name)
+        process_one_log_stream_inner(client, ner, fp, log_group_name, stream_name)
 
 def process_one_log_group(client, ner, log_group_name):
   nextToken = None
@@ -52,7 +52,7 @@ def process_one_log_group(client, ner, log_group_name):
       rv = client.describe_log_streams(logGroupName=log_group_name, orderBy='LastEventTime', descending=True, limit=50)
     log_streams = rv['logStreams']
     for one_stream in log_streams:
-      process_one_log_stream(client, ner, one_stream['logStreamName'], one_stream['creationTime'])
+      process_one_log_stream(client, ner, one_stream['logStreamName'], log_group_name, one_stream['creationTime'])
       break
     break
     if ('nextToken' in rv):
