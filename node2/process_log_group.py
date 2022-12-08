@@ -78,6 +78,7 @@ try:
   from concurrent_plugin import concurrent_core
   from transformers import pipeline
   from transformers import AutoTokenizer, AutoModelForTokenClassification
+  import json
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--access_key_id', help='aws access key id', required=True)
