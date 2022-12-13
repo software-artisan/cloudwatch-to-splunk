@@ -24,7 +24,7 @@ def get_cloud_watch_search_url(search, log_group, log_stream, region=None,):
     return url + bookmark
 
 def add_log_line(person, log_line, all_messages, log_group, log_line, region):
-  cw_url = get_cloud_watch_url('{$.message: "' + log_line + '"}', log_group, log_stream, region)
+  cw_url = get_cloud_watch_search_url('{$.message: "' + log_line + '"}', log_group, log_stream, region)
   print('CloudWatch URL is: ' + cw_url)
   if person in all_messages:
     all_messages[person].append(cw_url)
