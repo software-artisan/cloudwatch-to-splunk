@@ -104,6 +104,7 @@ try:
   from transformers import pipeline
   from transformers import AutoTokenizer, AutoModelForTokenClassification
   import json
+  import urllib
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--access_key_id', help='aws access key id', required=True)
