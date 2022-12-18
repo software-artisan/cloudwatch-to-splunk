@@ -1,55 +1,22 @@
 #!/usr/bin/env python3
 
-def get_cloud_watch_search_url(search, log_group, log_stream, region=None,):
-    """Return a properly formatted url string for search cloud watch logs
+def quote_once(s):
+    return quote(s, safe="").replace("%", "$")
 
-    search = "{$.message: "You are amazing"}
-    log_group = Is the group of message you want to search
-    log_stream = The stream of logs to search
-    """
-
-    url = f'https://{region}.console.aws.amazon.com/cloudwatch/home?region={region}'
-
-    def aws_encode(value):
-        """The heart of this is that AWS likes to quote things twice with some substitution"""
-        value = urllib.parse.quote_plus(value)
-        value = re.sub(r"\+", " ", value)
-        return re.sub(r"%", "$", urllib.parse.quote_plus(value))
-
-    def multiple_replace(text, adict):
-      rx = re.compile('|'.join(map(re.escape, adict)))
-      def one_xlat(match):
-        return adict[match.group(0)]
-      return rx.sub(one_xlat, text)
-
-    replace_map = {}
-    replace_map['/']='$252F'
-    replace_map['[']='$255B'
-    replace_map['$']='$2524'
-    replace_map[']']='$255D'
-
-    bookmark = '#logsV2:log-groups'
-    bookmark += '/log-group/' + log_group.replace('/', '%252F')
-    bookmark += "/log-events/" + multiple_replace(log_stream, replace_map)
-    bookmark += re.sub(r"%", "$", urllib.parse.quote("?filterPattern="))
-    bookmark += aws_encode(search)
-    return url + bookmark
-
-def aws_quote(s):
+def nested_quote(s):
     return quote(quote(s, safe="")).replace("%", "$")
 
-def aws_cloudwatch_url(region, log_group, log_stream):
+def aws_cloudwatch_url(region, log_group, log_stream, dt):
     return "/".join([
         f"https://{region}.console.aws.amazon.com/cloudwatch/home?region={region}#logsV2:log-groups",
         "log-group",
-        aws_quote(log_group),
+        nested_quote(log_group),
         "log-events",
-        aws_quote(log_stream),
+        nested_quote(log_stream) + quote_once('?start=') + nested_quote(str(dt)),
     ])
 
-def add_log_line(person, log_line, all_messages, log_group, log_stream, region):
-  #cw_url = get_cloud_watch_search_url('{$.message = "' + log_line + '"}', log_group, log_stream, region)
-  cw_url = aws_cloudwatch_url(region, log_group, log_stream)
+def add_log_line(dt, person, log_line, all_messages, log_group, log_stream, region):
+  cw_url = aws_cloudwatch_url(region, log_group, log_stream, dt)
   print('CloudWatch URL is: ' + cw_url)
   if person in all_messages:
     all_messages[person].append(cw_url)
@@ -68,7 +35,7 @@ def process_one_log_stream_inner(client, ner, fp, group_name, stream_name, regio
 
         events = resp['events']
         for event in events:
-            dt = datetime.datetime.fromtimestamp(event['timestamp']/1000)
+            dt = datetime.datetime.fromtimestamp(event['timestamp']/1000, datetime.timezone.utc)
             msg = event['message']
             # fp.write(str(dt) + ' : ' + msg)
             s = ner(msg)
@@ -81,7 +48,7 @@ def process_one_log_stream_inner(client, ner, fp, group_name, stream_name, regio
                 orgs.append(entry['word'])
               elif entry['entity_group'] == 'PER':
                 persons.append(entry['word'])
-                add_log_line(entry['word'], msg, all_messages, group_name, stream_name, region)
+                add_log_line(dt, entry['word'], msg, all_messages, group_name, stream_name, region)
               elif entry['entity_group'] == 'MISC':
                 misc.append(entry['word'])
             print(str(dt) + ": orgs=" + str(orgs) + ", persons=" + str(persons) + ", misc=" + str(misc) + " : " + msg)
