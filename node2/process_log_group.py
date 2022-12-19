@@ -14,6 +14,8 @@ def process_one_log_group(client, log_group_name, region):
       open(fn, 'a').close()
       ind = ind + 1
       concurrent_core.concurrent_log_artifact(fn, "dummy", LogGroupName=log_group_name, LogStreamName=one_stream['logStreamName'], region=region)
+      break
+    break
     if ('nextToken' in rv):
       nextToken = rv['nextToken']
     else:
