@@ -10,10 +10,10 @@ def process_one_log_group(client, log_group_name, region):
       rv = client.describe_log_streams(logGroupName=log_group_name, orderBy='LastEventTime', descending=True, limit=50)
     log_streams = rv['logStreams']
     for one_stream in log_streams:
-      fn = '/tmp/emptyfile-' + str(ind)
+      fn = '/tmp/' + log_group_name.replace('/', '-') + '-' + str(ind)
       open(fn, 'a').close()
       ind = ind + 1
-      concurrent_core.concurrent_log_artifact(fn, "dummy", LogGroupName=log_group_name, LogStreamName=one_stream['logStreamName'], region=region)
+      concurrent_core.concurrent_log_artifact(fn, "marker", LogGroupName=log_group_name, LogStreamName=one_stream['logStreamName'], region=region)
       break
     break
     if ('nextToken' in rv):
