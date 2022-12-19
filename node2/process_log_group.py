@@ -13,7 +13,7 @@ def process_one_log_group(client, log_group_name, region):
       fn = '/tmp/emptyfile-' + str(ind)
       open(fn, 'a').close()
       ind = ind + 1
-      concurrent_core.concurrent_log_artifact(fn, "dummy", LogGroupName=one_stream['logGroupName'], LogStreamName=one_stream['logStreamName'], region=region)
+      concurrent_core.concurrent_log_artifact(fn, "dummy", LogGroupName=log_group_name, LogStreamName=one_stream['logStreamName'], region=region)
     if ('nextToken' in rv):
       nextToken = rv['nextToken']
     else:
