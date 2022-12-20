@@ -14,6 +14,10 @@ try:
     print(f"PERIDOIC_RUN_FREQUENCY is {os.environ['PERIODIC_RUN_FREQUENCY']}", flush=True)
   else:
     print('PERIDOIC_RUN_FREQUENCY is not set')
+  if 'PERIODIC_RUN_START_TIME' in os.environ:
+    print(f"PERIDOIC_RUN_START_TIME is {os.environ['PERIODIC_RUN_START_TIME']}", flush=True)
+  else:
+    print('PERIDOIC_RUN_START_TIME is not set')
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--access_key_id', help='aws access key id', required=True)
