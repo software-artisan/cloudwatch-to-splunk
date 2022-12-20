@@ -10,6 +10,11 @@ try:
   import argparse
   from concurrent_plugin import concurrent_core
 
+  if 'PERIODIC_RUN_FREQUENCY' in os.environ:
+    print(f"PERIDOIC_RUN_FREQUENCY is {os.environ['PERIODIC_RUN_FREQUENCY']}", flush=True)
+  else:
+    print('PERIDOIC_RUN_FREQUENCY is not set')
+
   parser = argparse.ArgumentParser()
   parser.add_argument('--access_key_id', help='aws access key id', required=True)
   parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
