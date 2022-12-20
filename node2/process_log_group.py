@@ -13,9 +13,9 @@ def process_one_log_group(client, log_group_name, region):
       fn = '/tmp/' + log_group_name.replace('/', '-') + '-' + str(ind)
       open(fn, 'a').close()
       ind = ind + 1
+      if ind > 1:
+        return
       concurrent_core.concurrent_log_artifact(fn, "marker", LogGroupName=log_group_name, LogStreamName=one_stream['logStreamName'], region=region)
-      break
-    break
     if ('nextToken' in rv):
       nextToken = rv['nextToken']
     else:
