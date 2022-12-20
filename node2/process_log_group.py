@@ -13,8 +13,8 @@ def process_one_log_group(client, log_group_name, region):
       fn = '/tmp/' + log_group_name.replace('/', '-') + '-' + str(ind)
       open(fn, 'a').close()
       ind = ind + 1
-      if ind > 1:
-        return
+      #if ind > 1: # For testing. restrict to two log streams per log group
+        #return
       concurrent_core.concurrent_log_artifact(fn, "marker", LogGroupName=log_group_name, LogStreamName=one_stream['logStreamName'], region=region)
     if ('nextToken' in rv):
       nextToken = rv['nextToken']
