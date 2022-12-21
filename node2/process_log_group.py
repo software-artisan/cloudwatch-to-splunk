@@ -27,6 +27,7 @@ try:
   import os
   import sys
   import datetime
+  from datetime import timezone
   import tzlocal
   import argparse
   from concurrent_plugin import concurrent_core
@@ -36,6 +37,32 @@ try:
   import urllib
   import re
   from urllib.parse import quote
+
+  if 'PERIODIC_RUN_FREQUENCY' in os.environ:
+    print(f"PERIDOIC_RUN_FREQUENCY is {os.environ['PERIODIC_RUN_FREQUENCY']}", flush=True)
+  else:
+    print('PERIDOIC_RUN_FREQUENCY is not set')
+  if 'PERIODIC_RUN_START_TIME' in os.environ:
+    print(f"PERIDOIC_RUN_START_TIME is {os.environ['PERIODIC_RUN_START_TIME']}", flush=True)
+  else:
+    print('PERIDOIC_RUN_START_TIME is not set')
+  start_time = None
+  end_time = None
+  periodic_run_frequency = os.getenv('PERIODIC_RUN_FREQUENCY')
+  periodic_run_start_time = os.getenv('PERIODIC_RUN_START_TIME')
+  if periodic_run_frequency and  periodic_run_start_time:
+    end_time = datetime.fromtimestamp(int(periodic_run_start_time), tz=timezone.utc)
+    if periodic_run_frequency == 'hourly':
+        start_time = end_time - timedelta(hours=1)
+    elif periodic_run_frequency == 'daily':
+        start_time = end_time - timedelta(days=1)
+    elif periodic_run_frequency == 'weekly':
+        start_time = end_time - timedelta(days=7)
+    elif periodic_run_frequency == 'monthly':
+        start_time = end_time - timedelta(months=1)
+    elif periodic_run_frequency == 'yearly':
+        start_time = end_time - timedelta(years=1)
+    print(f'Periodic Run with frequency {periodic_run_frequency}. start_time={start_time} --> end_time={end_time}')
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--access_key_id', help='aws access key id', required=True)

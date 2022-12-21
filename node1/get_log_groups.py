@@ -18,6 +18,8 @@ try:
     print(f"PERIDOIC_RUN_START_TIME is {os.environ['PERIODIC_RUN_START_TIME']}", flush=True)
   else:
     print('PERIDOIC_RUN_START_TIME is not set')
+  periodic_run_frequency = os.getenv('PERIODIC_RUN_FREQUENCY')
+  periodic_run_start_time = os.getenv('PERIODIC_RUN_START_TIME')
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--access_key_id', help='aws access key id', required=True)
