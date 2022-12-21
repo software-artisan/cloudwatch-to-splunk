@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 
-def process_one_log_group(client, log_group_name, region):
+def overlap(start_time, end_time, stream_first_time, stream_last_time):
+  sa = []
+  if start_time < stream_first_time:
+    sa.append([start_time, end_time])
+    sa.append([stream_first_time, stream_last_time])
+  else:
+    sa.append([stream_first_time, stream_last_time])
+    sa.append([start_time, end_time])
+  if sa[1][0] < sa[0][1]:
+    return True
+  return False
+
+def process_one_log_group(client, log_group_name, region, start_time, end_time):
   ind = 0
   nextToken = None
   while True:
@@ -10,6 +22,12 @@ def process_one_log_group(client, log_group_name, region):
       rv = client.describe_log_streams(logGroupName=log_group_name, orderBy='LastEventTime', descending=True, limit=50)
     log_streams = rv['logStreams']
     for one_stream in log_streams:
+      stream_first_time = datetime.fromtimestamp(one_stream['firstEventTimestamp'], tz=timezone.utc)
+      stream_last_time = datetime.fromtimestamp(one_stream['lastEventTimestamp'], tz=timezone.utc)
+      if start_time and end_time:
+        if not overlap(start_time, end_time, stream_first_time, stream_last_time):
+          print(f'No overlap between periodic_run [{start_time} -> {end_time}] and stream [{stream_first_time} -> {stream_last_time}]. Done with streams')
+          return
       fn = '/tmp/' + log_group_name.replace('/', '-') + '-' + str(ind)
       open(fn, 'a').close()
       ind = ind + 1
@@ -81,7 +99,7 @@ try:
   df.reset_index()
   for ind, row in df.iterrows():
     print("Input row=" + str(row), flush=True)
-    process_one_log_group(client, row['LogGroupName'], region)
+    process_one_log_group(client, row['LogGroupName'], region, start_time, end_time)
   print('------------------------------ Finished Input ----------------', flush=True)
   os._exit(os.EX_OK)
 except Exception as e1:
