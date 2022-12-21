@@ -24,9 +24,11 @@ def process_one_log_group(client, log_group_name, region, start_time, end_time):
     for one_stream in log_streams:
       stream_first_time = datetime.fromtimestamp(one_stream['firstEventTimestamp'], tz=timezone.utc)
       stream_last_time = datetime.fromtimestamp(one_stream['lastEventTimestamp'], tz=timezone.utc)
+      print(f'log_stream [{stream_first_time} -> {stream_last_time}]', flush=True)
       if start_time and end_time:
+        print(f'start_time and end_time are defined: [{start_time} -> {end_time}]', flush=True)
         if not overlap(start_time, end_time, stream_first_time, stream_last_time):
-          print(f'No overlap between periodic_run [{start_time} -> {end_time}] and stream [{stream_first_time} -> {stream_last_time}]. Done with streams')
+          print(f'No overlap between periodic_run [{start_time} -> {end_time}] and stream [{stream_first_time} -> {stream_last_time}]. Done with streams', flush=True)
           return
       fn = '/tmp/' + log_group_name.replace('/', '-') + '-' + str(ind)
       open(fn, 'a').close()
@@ -67,7 +69,7 @@ try:
   end_time = None
   periodic_run_frequency = os.getenv('PERIODIC_RUN_FREQUENCY')
   periodic_run_start_time = os.getenv('PERIODIC_RUN_START_TIME')
-  if periodic_run_frequency and  periodic_run_start_time:
+  if periodic_run_frequency and periodic_run_start_time:
     end_time = datetime.fromtimestamp(int(periodic_run_start_time), tz=timezone.utc)
     if periodic_run_frequency == 'hourly':
         start_time = end_time - timedelta(hours=1)
@@ -79,6 +81,10 @@ try:
         start_time = end_time - timedelta(months=1)
     elif periodic_run_frequency == 'yearly':
         start_time = end_time - timedelta(years=1)
+    else:
+      print('Error. Unknown periodic_run_frequency ' + str(periodic_run_frequency), flush=True)
+      start_time = None
+      end_time = None
     print(f'Periodic Run with frequency {periodic_run_frequency}. start_time={start_time} --> end_time={end_time}')
 
   parser = argparse.ArgumentParser()
