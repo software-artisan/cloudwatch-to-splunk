@@ -41,6 +41,7 @@ def process_one_log_group(client, log_group_name, region, start_time, end_time):
     else:
       break
 
+import traceback
 try:
   from time import time
   import boto3
@@ -109,5 +110,6 @@ try:
   os._exit(os.EX_OK)
 except Exception as e1:
   print("Caught " + str(e1), flush=True)
+  traceback.print_tb(e1)
   os._exit(os.EX_OK)
 
