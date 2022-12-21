@@ -22,8 +22,8 @@ def process_one_log_group(client, log_group_name, region, start_time, end_time):
       rv = client.describe_log_streams(logGroupName=log_group_name, orderBy='LastEventTime', descending=True, limit=50)
     log_streams = rv['logStreams']
     for one_stream in log_streams:
-      stream_first_time = datetime.fromtimestamp(one_stream['firstEventTimestamp'], tz=timezone.utc)
-      stream_last_time = datetime.fromtimestamp(one_stream['lastEventTimestamp'], tz=timezone.utc)
+      stream_first_time = datetime.fromtimestamp(one_stream['firstEventTimestamp']/1000, tz=timezone.utc)
+      stream_last_time = datetime.fromtimestamp(one_stream['lastEventTimestamp']/1000, tz=timezone.utc)
       print(f'log_stream [{stream_first_time} -> {stream_last_time}]', flush=True)
       if start_time and end_time:
         print(f'start_time and end_time are defined: [{start_time} -> {end_time}]', flush=True)
