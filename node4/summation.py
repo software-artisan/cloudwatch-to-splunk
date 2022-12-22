@@ -19,7 +19,7 @@ try:
   import time
   import argparse
   from concurrent_plugin import concurrent_core
-  from infinstor import infin_boto3
+  #from infinstor import infin_boto3
 
   print('summation: Entered', flush=True)
   if 'PERIODIC_RUN_START_TIME' in os.environ:
