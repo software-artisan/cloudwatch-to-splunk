@@ -16,9 +16,26 @@ try:
   import pandas as pd
   import json
   import sys
+  import time
+  import argparse
   from concurrent_plugin import concurrent_core
 
   print('summation: Entered', flush=True)
+  if 'PERIODIC_RUN_START_TIME' in os.environ:
+    print(f"PERIDOIC_RUN_START_TIME is {os.environ['PERIODIC_RUN_START_TIME']}", flush=True)
+    periodic_run_start_time = os.getenv('PERIODIC_RUN_START_TIME')
+  else:
+    print('PERIDOIC_RUN_START_TIME is not set. Using current time')
+    periodic_run_start_time = time.time_ns()//1_000_000
+
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--access_key_id', help='aws access key id', required=True)
+  parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
+  parser.add_argument('--bucket', help='output bucket name', required=True)
+  parser.add_argument('--prefix', help='output prefix', required=True)
+
+  args = parser.parse_args()
+
   df = concurrent_core.list(None, input_name='input1')
 
   print('Concurrent Core DataFrame Columns:', flush=True)
@@ -38,9 +55,13 @@ try:
           union(summation, dct)
   with open("/tmp/summation.json", 'w') as fp:
     json.dump(summation, fp)
+
+  client = boto3.client('s3', aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
+  obj_name = args.prefix.lstrip('/').rstrip('/') + '/' + str(periodic_run_start_time) + '/summation.json'
+  response = client.upload_file('/tmp/summation.json', args.bucket, obj_name)
+
   concurrent_core.concurrent_log_artifact("/tmp/summation.json", "")
   os._exit(os.EX_OK)
 except Exception as e1:
   print("Caught " + str(e1), flush=True)
-  os._exit(os.EX_OK)
-
+  os._exit(os.EX_SOFTWARE)
