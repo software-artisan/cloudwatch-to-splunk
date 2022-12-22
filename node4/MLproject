@@ -6,8 +6,6 @@ docker_env:
 entry_points:
   main:
     parameters:
-      access_key_id: {type: string}
-      secret_access_key: {type: string}
       bucket: {type: string}
       prefix: {type: string}
-    command: "python3 summation.py --access_key_id={access_key_id} --secret_access_key={secret_access_key} --bucket={bucket} --prefix={prefix}"
+    command: "python3 summation.py --bucket={bucket} --prefix={prefix}"

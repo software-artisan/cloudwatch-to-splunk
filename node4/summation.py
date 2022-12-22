@@ -19,6 +19,7 @@ try:
   import time
   import argparse
   from concurrent_plugin import concurrent_core
+  from infinstor import infin_boto3
 
   print('summation: Entered', flush=True)
   if 'PERIODIC_RUN_START_TIME' in os.environ:
@@ -29,8 +30,6 @@ try:
     periodic_run_start_time = time.time_ns()//1_000_000
 
   parser = argparse.ArgumentParser()
-  parser.add_argument('--access_key_id', help='aws access key id', required=True)
-  parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
   parser.add_argument('--bucket', help='output bucket name', required=True)
   parser.add_argument('--prefix', help='output prefix', required=True)
 
@@ -56,7 +55,7 @@ try:
   with open("/tmp/summation.json", 'w') as fp:
     json.dump(summation, fp)
 
-  client = boto3.client('s3', aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
+  client = boto3.client('s3')
   obj_name = args.prefix.lstrip('/').rstrip('/') + '/' + str(periodic_run_start_time) + '/summation.json'
   response = client.upload_file('/tmp/summation.json', args.bucket, obj_name)
 
