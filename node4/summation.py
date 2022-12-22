@@ -19,7 +19,7 @@ try:
   import time
   import argparse
   from concurrent_plugin import concurrent_core
-  #from infinstor import infin_boto3
+  from infinstor import infin_boto3
 
   print('summation: Entered', flush=True)
   if 'PERIODIC_RUN_START_TIME' in os.environ:
@@ -55,9 +55,9 @@ try:
   with open("/tmp/summation.json", 'w') as fp:
     json.dump(summation, fp)
 
-  #client = boto3.client('s3')
-  #obj_name = args.prefix.lstrip('/').rstrip('/') + '/' + str(periodic_run_start_time) + '/summation.json'
-  #response = client.upload_file('/tmp/summation.json', args.bucket, obj_name)
+  client = boto3.client('s3')
+  obj_name = args.prefix.lstrip('/').rstrip('/') + '/' + str(periodic_run_start_time) + '/summation.json'
+  response = client.upload_file('/tmp/summation.json', args.bucket, obj_name)
 
   concurrent_core.concurrent_log_artifact("/tmp/summation.json", "")
   os._exit(os.EX_OK)
