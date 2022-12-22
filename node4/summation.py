@@ -55,9 +55,9 @@ try:
   with open("/tmp/summation.json", 'w') as fp:
     json.dump(summation, fp)
 
-  client = boto3.client('s3')
-  obj_name = args.prefix.lstrip('/').rstrip('/') + '/' + str(periodic_run_start_time) + '/summation.json'
-  response = client.upload_file('/tmp/summation.json', args.bucket, obj_name)
+  #client = boto3.client('s3')
+  #obj_name = args.prefix.lstrip('/').rstrip('/') + '/' + str(periodic_run_start_time) + '/summation.json'
+  #response = client.upload_file('/tmp/summation.json', args.bucket, obj_name)
 
   concurrent_core.concurrent_log_artifact("/tmp/summation.json", "")
   os._exit(os.EX_OK)
