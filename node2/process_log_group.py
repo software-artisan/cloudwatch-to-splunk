@@ -48,6 +48,7 @@ try:
   import os
   import sys
   from datetime import date, datetime, timezone, timedelta
+  from dateutil.relativedelta import relativedelta
   import tzlocal
   import argparse
   from concurrent_plugin import concurrent_core
@@ -79,9 +80,9 @@ try:
     elif periodic_run_frequency == 'weekly':
         start_time = end_time - timedelta(days=7)
     elif periodic_run_frequency == 'monthly':
-        start_time = end_time - timedelta(months=1)
+        start_time = end_time - relativedelta(months=1)
     elif periodic_run_frequency == 'yearly':
-        start_time = end_time - timedelta(years=1)
+        start_time = end_time - relativedelta(years=1)
     else:
       print('Error. Unknown periodic_run_frequency ' + str(periodic_run_frequency), flush=True)
       start_time = None
