@@ -19,11 +19,12 @@ def add_log_line(dt, person, all_messages, log_group, log_stream, region):
   cw_url = aws_cloudwatch_url(region, log_group, log_stream, dt)
   print('CloudWatch URL is: ' + cw_url)
   if person in all_messages:
-    all_messages[person].append(cw_url)
+    all_messages[person].append((dt.timestamp(), cw_url))
   else:
-    all_messages[person] = [cw_url]
+    all_messages[person] = [(dt.timestamp(), cw_url)]
 
-def process_one_log_stream(client, ner, group_name, stream_name, region, all_messages):
+def process_one_log_stream(client, ner, group_name, stream_name, region):
+    all_messages = {}
     nt = None
     while (True):
         print('.... nt=' + str(nt))
@@ -57,6 +58,12 @@ def process_one_log_stream(client, ner, group_name, stream_name, region, all_mes
             nt = resp['nextForwardToken']
         else:
           break
+    if all_messages:
+      fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '.json'
+      with open(fn, 'w') as fp:
+        json.dump(all_messages, fp)
+      concurrent_core.concurrent_log_artifact(fn, "")
+
 
 try:
   from time import time
@@ -102,10 +109,9 @@ try:
   print('------------------------------ Start Input ----------------', flush=True)
   df.reset_index()
 
-  all_messages = {}
   for ind, row in df.iterrows():
     print("Input row=" + str(row), flush=True)
-    process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'], row['region'], all_messages)
+    process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'], row['region'])
   print('------------------------------ Finished Input ----------------', flush=True)
 
   print('------------------------------ Start Logging Artifact ----------------', flush=True)
