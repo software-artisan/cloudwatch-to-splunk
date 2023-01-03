@@ -23,7 +23,7 @@ def add_log_line(dt, person, all_messages, log_group, log_stream, region):
   else:
     all_messages[person] = [(dt.timestamp(), cw_url)]
 
-def process_one_log_stream(client, ner, group_name, stream_name, region):
+def process_one_log_stream(client, ner, group_name, stream_name, first_event_time, last_event_time, region, s3client, bucket, prefix):
     all_messages = {}
     nt = None
     while (True):
@@ -62,8 +62,10 @@ def process_one_log_stream(client, ner, group_name, stream_name, region):
       fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '.json'
       with open(fn, 'w') as fp:
         json.dump(all_messages, fp)
-      concurrent_core.concurrent_log_artifact(fn, "")
-
+      print(f"File Name = {fn}")
+      obj_name = prefix.lstrip('/').rstrip('/') + '/' + fn.lstrip('/')
+      print(f"Object Name = {obj_name}")
+      response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(first_event_time)}})
 
 try:
   from time import time
@@ -80,10 +82,13 @@ try:
   import urllib
   import re
   from urllib.parse import quote
+  from infinstor import infin_boto3
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--access_key_id', help='aws access key id', required=True)
   parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
+  parser.add_argument('--bucket', help='output bucket name', required=True)
+  parser.add_argument('--prefix', help='output prefix', required=True)
 
   args = parser.parse_args()
 
@@ -109,16 +114,13 @@ try:
   print('------------------------------ Start Input ----------------', flush=True)
   df.reset_index()
 
+  s3client = boto3.client('s3')
+
   for ind, row in df.iterrows():
     print("Input row=" + str(row), flush=True)
-    process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'], row['region'])
+    process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'], row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'], s3client, args.bucket, args.prefix)
   print('------------------------------ Finished Input ----------------', flush=True)
 
-  print('------------------------------ Start Logging Artifact ----------------', flush=True)
-  with open("/tmp/output.json", 'w') as fp:
-    json.dump(all_messages, fp)
-  concurrent_core.concurrent_log_artifact("/tmp/output.json", "")
-  print('------------------------------ End Logging Artifact ----------------', flush=True)
   os._exit(os.EX_OK)
 except Exception as e1:
   print("Caught " + str(e1), flush=True)

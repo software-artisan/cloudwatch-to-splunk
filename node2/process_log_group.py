@@ -35,7 +35,7 @@ def process_one_log_group(client, log_group_name, region, start_time, end_time):
       ind = ind + 1
       #if ind > 1: # For testing. restrict to two log streams per log group
         #return
-      concurrent_core.concurrent_log_artifact(fn, "marker", LogGroupName=log_group_name, LogStreamName=one_stream['logStreamName'], region=region)
+      concurrent_core.concurrent_log_artifact(fn, "marker", LogGroupName=log_group_name, LogStreamName=one_stream['logStreamName'], LogStreamFirstEventTime=one_stream['firstEventTimestamp'], LogStreamLastEventTime=one_stream['lastEventTimestamp'], region=region)
     if ('nextToken' in rv):
       nextToken = rv['nextToken']
     else:
