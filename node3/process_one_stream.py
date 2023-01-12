@@ -34,10 +34,14 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
             resp = client.get_log_events(logGroupName=group_name, logStreamName=stream_name, startFromHead=True)
 
         events = resp['events']
-        for event in events:
+        msg_list = [event['message'] for event in events]
+        print("Apply model to all message count: " + str(len(msg_list)))
+        output_list = ner(msg_list)
+        for idx, event in enumerate(events):
             dt = datetime.datetime.fromtimestamp(event['timestamp']/1000, datetime.timezone.utc)
             msg = event['message']
-            s = ner(msg)
+            #s = ner(msg)
+            s = output_list[idx]
             orgs = []
             persons = []
             misc = []
