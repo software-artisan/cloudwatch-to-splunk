@@ -122,7 +122,10 @@ try:
 
   for ind, row in df.iterrows():
     print("Input row=" + str(row), flush=True)
-    process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'], row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'], s3client, args.bucket, args.prefix)
+    try:
+        process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'], row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'], s3client, args.bucket, args.prefix)
+    except Exception as e2:
+      print(f"Caught {e1}. Ignoring. Log stream {row['LogStreamName']} finished. Continuing.." , flush=True)
   print('------------------------------ Finished Input ----------------', flush=True)
 
   os._exit(os.EX_OK)
