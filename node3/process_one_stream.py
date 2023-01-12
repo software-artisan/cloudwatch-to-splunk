@@ -36,8 +36,8 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
         events = resp['events']
         msg_list = [event['message'] for event in events]
         if not msg_list:
-          print("No messages to apply model. Log stream done.")
-          return
+          print("No more messages to apply model")
+          break
         print("Apply model to all message count: " + str(len(msg_list)))
         output_list = ner(msg_list)
         for idx, event in enumerate(events):
