@@ -35,6 +35,9 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
 
         events = resp['events']
         msg_list = [event['message'] for event in events]
+        if not msg_list:
+          print("No messages to apply model. Log stream done.")
+          return
         print("Apply model to all message count: " + str(len(msg_list)))
         output_list = ner(msg_list)
         for idx, event in enumerate(events):
@@ -125,7 +128,7 @@ try:
     try:
         process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'], row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'], s3client, args.bucket, args.prefix)
     except Exception as e2:
-      print(f"Caught {e1}. Ignoring. Log stream {row['LogStreamName']} finished. Continuing.." , flush=True)
+      print(f"Caught {e2} processing log stream. Ignoring and continuing to next log stream.." , flush=True)
   print('------------------------------ Finished Input ----------------', flush=True)
 
   os._exit(os.EX_OK)
