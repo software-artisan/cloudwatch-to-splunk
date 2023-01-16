@@ -23,41 +23,49 @@ def add_log_line(dt, person, all_messages, log_group, log_stream, region):
   else:
     all_messages[person] = [(dt.timestamp(), cw_url)]
 
-def process_one_log_stream(client, ner, group_name, stream_name, first_event_time, last_event_time, region, s3client, bucket, prefix):
+def process_one_log_stream(client, ner, group_name, stream_name, first_event_time, last_event_time,
+                            region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
+    print(f"process_one_log_stream: Entered. grp={group_name}, strm={stream_name}", flush=True)
+    print(f"  first_event_time={first_event_time}, last_event_time={last_event_time} output=s3://{bucket}/{prefix}", flush=True)
+    print(f"  start_time_epochs={start_time_epochs}, end_time_epochs={end_time_epochs}", flush=True)
     all_messages = {}
     nt = None
     while (True):
-        print('.... nt=' + str(nt))
+        print(f".... nt={nt}, len_all_msgs={len(all_messages)}", flush=True)
         if nt:
-            resp = client.get_log_events(logGroupName=group_name, logStreamName=stream_name, startFromHead=False, nextToken=nt)
+            resp = client.get_log_events(logGroupName=group_name, logStreamName=stream_name,
+                    startTime=start_time_epochms, endTime=end_time_epochms,
+                    startFromHead=True, nextToken=nt, unmask=True)
         else:
-            resp = client.get_log_events(logGroupName=group_name, logStreamName=stream_name, startFromHead=True)
+            resp = client.get_log_events(logGroupName=group_name, logStreamName=stream_name,
+                    startTime=start_time_epochms, endTime=end_time_epochms,
+                    startFromHead=True, unmask=True)
 
         events = resp['events']
-        msg_list = [event['message'] for event in events]
+        msg_list = []
+        timestamp_list = []
+        for idx, event in enumerate(events):
+            msg_list.append(event['message'])
+            timestamp_list.append(datetime.datetime.fromtimestamp(event['timestamp']/1000, datetime.timezone.utc))
         if not msg_list:
           print("No more messages to apply model")
           break
-        print("Apply model to all message count: " + str(len(msg_list)))
         output_list = ner(msg_list)
-        for idx, event in enumerate(events):
-            dt = datetime.datetime.fromtimestamp(event['timestamp']/1000, datetime.timezone.utc)
-            msg = event['message']
-            #s = ner(msg)
-            s = output_list[idx]
+        for idx, one_output in enumerate(output_list):
             orgs = []
             persons = []
             misc = []
-            for entry in s:
+            for entry in one_output:
               print("ner ret: Entry=" + str(entry))
+              s_entry_word = entry['word'].strip()
               if entry['entity_group'] == 'ORG':
-                orgs.append(entry['word'].strip())
+                orgs.append(s_entry_word)
               elif entry['entity_group'] == 'PER':
-                persons.append(entry['word'].strip())
-                add_log_line(dt, entry['word'], all_messages, group_name, stream_name, region)
+                persons.append(s_entry_word)
+                add_log_line(timestamp_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
               elif entry['entity_group'] == 'MISC':
-                misc.append(entry['word'].strip())
-            print(str(dt) + ": orgs=" + str(orgs) + ", persons=" + str(persons) + ", misc=" + str(misc) + " : " + msg)
+                misc.append(s_entry_word)
+            print(str(timestamp_list[idx]) + ": orgs=" + str(orgs) + ", persons=" + str(persons) + ", misc=" + str(misc) + " : " + msg)
         if ('nextForwardToken' in resp):
           if nt == resp['nextForwardToken']:
             break
@@ -121,12 +129,36 @@ try:
   print('------------------------------ Start Input ----------------', flush=True)
   df.reset_index()
 
+  start_time = None
+  end_time = None
+  periodic_run_frequency = os.getenv('PERIODIC_RUN_FREQUENCY')
+  periodic_run_start_time = os.getenv('PERIODIC_RUN_START_TIME')
+  if periodic_run_frequency and periodic_run_start_time:
+    end_time = datetime.fromtimestamp(int(periodic_run_start_time)/1000, tz=timezone.utc)
+    if periodic_run_frequency == 'hourly':
+        start_time = end_time - timedelta(hours=1)
+    elif periodic_run_frequency == 'daily':
+        start_time = end_time - timedelta(days=1)
+    elif periodic_run_frequency == 'weekly':
+        start_time = end_time - timedelta(days=7)
+    elif periodic_run_frequency == 'monthly':
+        start_time = end_time - relativedelta(months=1)
+    elif periodic_run_frequency == 'yearly':
+        start_time = end_time - relativedelta(years=1)
+    else:
+      print('Error. Unknown periodic_run_frequency ' + str(periodic_run_frequency), flush=True)
+      start_time = None
+      end_time = None
+    print(f'Periodic Run with frequency {periodic_run_frequency}. start_time={start_time} --> end_time={end_time}')
+
   s3client = boto3.client('s3')
 
   for ind, row in df.iterrows():
     print("Input row=" + str(row), flush=True)
     try:
-        process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'], row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'], s3client, args.bucket, args.prefix)
+        process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'],
+                        row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'],
+                        s3client, args.bucket, args.prefix, int(periodic_run_start_time), end_time.timestamp() * 1000)
     except Exception as e2:
       print(f"Caught {e2} processing log stream. Ignoring and continuing to next log stream.." , flush=True)
   print('------------------------------ Finished Input ----------------', flush=True)
