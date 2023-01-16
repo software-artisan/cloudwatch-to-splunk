@@ -134,7 +134,7 @@ try:
   periodic_run_frequency = os.getenv('PERIODIC_RUN_FREQUENCY')
   periodic_run_start_time = os.getenv('PERIODIC_RUN_START_TIME')
   if periodic_run_frequency and periodic_run_start_time:
-    end_time = datetime.fromtimestamp(int(periodic_run_start_time)/1000, tz=timezone.utc)
+    end_time = datetime.datetime.fromtimestamp(int(periodic_run_start_time)/1000, tz=timezone.utc)
     if periodic_run_frequency == 'hourly':
         start_time = end_time - timedelta(hours=1)
     elif periodic_run_frequency == 'daily':

@@ -24,6 +24,7 @@ try:
   parser = argparse.ArgumentParser()
   parser.add_argument('--access_key_id', help='aws access key id', required=True)
   parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
+  parser.add_argument('--groupname_startswith', help='only choose log group names that start with this', required=False)
 
   args = parser.parse_args()
 
@@ -39,11 +40,14 @@ try:
     for pg in page_iterator:
       print('pg=' + str(pg), flush=True)
       for group in pg['logGroups']:
-        print(group['logGroupName'], flush=True)
-        fn = '/tmp/emptyfile-' + str(ind)
-        open(fn, 'a').close()
-        ind = ind + 1
-        concurrent_core.concurrent_log_artifact(fn, "dummy", LogGroupName=group['logGroupName'])
+        if args.groupname_startswith and not group['logGroupName'].startswith(args.groupname_startswith):
+            print(f"Group name {group['logGroupName']} does not start with {args.groupname_startswith}. Skipping group..")
+        else:
+            print(f"Choosing group {group['logGroupName']}", flush=True)
+            fn = '/tmp/emptyfile-' + str(ind)
+            open(fn, 'a').close()
+            ind = ind + 1
+            concurrent_core.concurrent_log_artifact(fn, "dummy", LogGroupName=group['logGroupName'])
     if 'NextToken' in page_iterator:
       nextToken = page_iterator['NextToken']
     else:
