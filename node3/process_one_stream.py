@@ -46,7 +46,7 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
         timestamp_list = []
         for idx, event in enumerate(events):
             msg_list.append(event['message'])
-            timestamp_list.append(datetime.datetime.fromtimestamp(event['timestamp']/1000, datetime.timezone.utc))
+            timestamp_list.append(datetime.fromtimestamp(event['timestamp']/1000, timezone.utc))
         if not msg_list:
           print("No more messages to apply model")
           break
@@ -87,7 +87,7 @@ try:
   import boto3
   import os
   import sys
-  import datetime
+  from datetime import datetime, timezone, timedelta
   import tzlocal
   import argparse
   from concurrent_plugin import concurrent_core
@@ -134,7 +134,7 @@ try:
   periodic_run_frequency = os.getenv('PERIODIC_RUN_FREQUENCY')
   periodic_run_start_time = os.getenv('PERIODIC_RUN_START_TIME')
   if periodic_run_frequency and periodic_run_start_time:
-    end_time = datetime.datetime.fromtimestamp(int(periodic_run_start_time)/1000, tz=timezone.utc)
+    end_time = datetime.fromtimestamp(int(periodic_run_start_time)/1000, tz=timezone.utc)
     if periodic_run_frequency == 'hourly':
         start_time = end_time - timedelta(hours=1)
     elif periodic_run_frequency == 'daily':
