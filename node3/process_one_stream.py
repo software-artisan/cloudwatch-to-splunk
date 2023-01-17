@@ -27,7 +27,7 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
     print(f"process_one_log_stream: Entered. grp={group_name}, strm={stream_name}", flush=True)
     print(f"  first_event_time={first_event_time}, last_event_time={last_event_time} output=s3://{bucket}/{prefix}", flush=True)
-    print(f"  start_time_epochs={start_time_epochs}, end_time_epochs={end_time_epochs}", flush=True)
+    print(f"  start_time_epochs={start_time_epochms}, end_time_epochs={end_time_epochms}", flush=True)
     all_messages = {}
     nt = None
     while (True):
