@@ -65,7 +65,7 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
                 add_log_line(timestamp_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
               elif entry['entity_group'] == 'MISC':
                 misc.append(s_entry_word)
-            print(str(timestamp_list[idx]) + ": orgs=" + str(orgs) + ", persons=" + str(persons) + ", misc=" + str(misc) + " : " + msg)
+            print(str(timestamp_list[idx]) + ": orgs=" + str(orgs) + ", persons=" + str(persons) + ", misc=" + str(misc) + " : " + msg_list[idx])
         if ('nextForwardToken' in resp):
           if nt == resp['nextForwardToken']:
             break
