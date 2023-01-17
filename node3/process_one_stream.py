@@ -34,11 +34,11 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
         print(f".... nt={nt}, len_all_msgs={len(all_messages)}", flush=True)
         if nt:
             resp = client.get_log_events(logGroupName=group_name, logStreamName=stream_name,
-                    startTime=start_time_epochms, endTime=end_time_epochms,
+                    startTime=int(start_time_epochms), endTime=int(end_time_epochms),
                     startFromHead=True, nextToken=nt, unmask=True)
         else:
             resp = client.get_log_events(logGroupName=group_name, logStreamName=stream_name,
-                    startTime=start_time_epochms, endTime=end_time_epochms,
+                    startTime=int(start_time_epochms), endTime=int(end_time_epochms),
                     startFromHead=True, unmask=True)
 
         events = resp['events']
