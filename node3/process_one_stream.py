@@ -34,11 +34,11 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
         print(f".... nt={nt}, len_all_msgs={len(all_messages)}", flush=True)
         if nt:
             resp = client.get_log_events(logGroupName=group_name, logStreamName=stream_name,
-                    startTime=int(start_time_epochms), endTime=int(end_time_epochms),
+                    startTime=start_time_epochms, endTime=end_time_epochms,
                     startFromHead=True, nextToken=nt, unmask=True)
         else:
             resp = client.get_log_events(logGroupName=group_name, logStreamName=stream_name,
-                    startTime=int(start_time_epochms), endTime=int(end_time_epochms),
+                    startTime=start_time_epochms, endTime=end_time_epochms,
                     startFromHead=True, unmask=True)
 
         events = resp['events']
@@ -158,7 +158,7 @@ try:
     try:
         process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'],
                         row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'],
-                        s3client, args.bucket, args.prefix, int(periodic_run_start_time), end_time.timestamp() * 1000)
+                        s3client, args.bucket, args.prefix, int(start_time.timestamp() * 1000), int(periodic_run_start_time))
     except Exception as e2:
       print(f"Caught {e2} processing log stream. Ignoring and continuing to next log stream.." , flush=True)
   print('------------------------------ Finished Input ----------------', flush=True)
