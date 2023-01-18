@@ -45,11 +45,17 @@ def process_one_log_stream(client, ner, sql_tokenizer, summ_model, group_name, s
         msg_list = []
         timestamp_list = []
         for event in events:
+            inp_txt = None
             q_ind = event['message'].find('Query\t')
-            print(f"message={event['message']}, q_ind={q_ind}")
             if q_ind >= 0:
-              input_text = f"translate SQL to English: {event['message'][q_ind+6:]} </s>"
-              print(f"input_text={input_text}")
+              inp_txt = event['message'][q_ind+6:]
+            else:
+              q_ind = event['message'].find('Execute\t')
+              if q_ind >= 0:
+                inp_txt = event['message'][q_ind+8:]
+            print(f"message={event['message']}, inp_txt={inp_txt}")
+            if inp_txt:
+              input_text = f"translate SQL to English: {inp_txt} </s>"
               features = sql_tokenizer([input_text], return_tensors='pt')
               output = summ_model.generate(input_ids=features['input_ids'].cuda(),
                         attention_mask=features['attention_mask'].cuda())
