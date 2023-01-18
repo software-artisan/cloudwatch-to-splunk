@@ -147,21 +147,30 @@ def tokenizeSql(code):
     statement_list = []
     result_list = []
     code = sanitizeSql(code)
+    print(f"Sanitized SQL={code}")
     tokens = sqlparse.parse(code)
+    print(f"Tokens={tokens}")
     statements, result = my_traverse(tokens, statement_list, result_list)
+    print(f"Statements={statements}, result={result}")
 
     table_map = {}
     column_map = {}
     for i in range(len(statements)):
+      print(f"i={i}, stmt={statements[i]}")
       if statements[i] in [sqlparse.tokens.Number.Integer, sqlparse.tokens.Literal.Number.Integer]:
+        print(f"CODE_INTEGER")
         result[i] = "CODE_INTEGER"
       elif statements[i] in [sqlparse.tokens.Number.Float, sqlparse.tokens.Literal.Number.Float]:
+        print(f"CODE_FLOAT")
         result[i] = "CODE_FLOAT"
       elif statements[i] in [sqlparse.tokens.Number.Hexadecimal, sqlparse.tokens.Literal.Number.Hexadecimal]:
+        print(f"CODE_HEX")
         result[i] = "CODE_HEX"
       elif statements[i] in [sqlparse.tokens.String.Symbol, sqlparse.tokens.String.Single, sqlparse.tokens.Literal.String.Single, sqlparse.tokens.Literal.String.Symbol]:
         result[i] = tokenizeRegex(result[i])
+        print(f"TokenizedRegex={result[i]}")
       elif statements[i] in[sqlparse.tokens.Name, sqlparse.tokens.Name.Placeholder, sqlparse.sql.Identifier]:
+        print("AAAAA")
         old_value = result[i]
         if old_value in column_map:
           result[i] = column_map[old_value]
@@ -169,6 +178,7 @@ def tokenizeSql(code):
           result[i] = 'col'+ str(len(column_map))
           column_map[old_value] = result[i]
       elif (result[i] == "." and statements[i] == sqlparse.tokens.Punctuation and i > 0 and result[i-1].startswith('col')):
+        print("BBBBB")
         old_value = result[i-1]
         if old_value in table_map:
           result[i-1] = table_map[old_value]
@@ -176,6 +186,7 @@ def tokenizeSql(code):
           result[i-1] = 'tab'+ str(len(table_map))
           table_map[old_value] = result[i-1]
       if (result[i].startswith('col') and i > 0 and (result[i-1] in ["from"])):
+        print("CCCCC")
         old_value = result[i]
         if old_value in table_map:
           result[i] = table_map[old_value]
