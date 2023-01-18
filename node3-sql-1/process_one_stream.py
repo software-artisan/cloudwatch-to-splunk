@@ -185,6 +185,7 @@ def tokenizeSql(code):
 
     tokenized_code = ' '.join(result)
     print("SQL after tokenized: " + tokenized_code)
+    return tokenized_code
 
 try:
   from time import time
