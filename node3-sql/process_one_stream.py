@@ -93,6 +93,18 @@ def process_one_log_stream(client, ner, sql_tokenizer, summ_model, group_name, s
       print(f"Object Name = {obj_name}")
       response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(first_event_time)}})
 
+def print_gpu_utilization():
+    nvmlInit()
+    handle = nvmlDeviceGetHandleByIndex(0)
+    info = nvmlDeviceGetMemoryInfo(handle)
+    print(f"GPU memory occupied: {info.used//1024**2} MB.")
+
+
+def print_summary(result):
+    print(f"Time: {result.metrics['train_runtime']:.2f}")
+    print(f"Samples/second: {result.metrics['train_samples_per_second']:.2f}")
+    print_gpu_utilization()
+
 try:
   from time import time
   import boto3
@@ -110,6 +122,7 @@ try:
   from urllib.parse import quote
   from infinstor import infin_boto3
   import torch
+  from pynvml import *
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--access_key_id', help='aws access key id', required=True)
@@ -122,25 +135,31 @@ try:
   print('------------------------------ Begin Loading Huggingface SQL summarization model ------------------', flush=True)
   try:
     from transformers import AutoTokenizer, AutoModelWithLMHead
-    sql_tokenizer = AutoTokenizer.from_pretrained("dbernsohn/t5_wikisql_SQL2en").to('cuda')
-    summ_model = AutoModelWithLMHead.from_pretrained("dbernsohn/t5_wikisql_SQL2en")
+    sql_tokenizer = AutoTokenizer.from_pretrained("dbernsohn/t5_wikisql_SQL2en")
+    summ_model = AutoModelWithLMHead.from_pretrained("dbernsohn/t5_wikisql_SQL2en").to('cuda')
   except Exception as err:
     print('Caught ' + str(err) + ' while loading summarization model', flush=True)
     os._exit(os.EX_OK)
   print('------------------------------ Finished Loading Huggingface SQL summariztion model ------------------', flush=True)
 
+  print_gpu_utilization()
+
   print('------------------------------ Begin Loading Huggingface ner model ------------------', flush=True)
   try:
-    tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english").to('cuda')
-    model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
+    tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
+    model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english").to('cuda')
   except Exception as err:
     print('Caught ' + str(err) + ' while loading ner model', flush=True)
     os._exit(os.EX_OK)
   print('------------------------------ After Loading Huggingface ner model ------------------', flush=True)
 
+  print_gpu_utilization()
+
   print('------------------------------ Begin Creating Huggingface ner pipeline ------------------', flush=True)
   ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
   print('------------------------------ After Creating Huggingface ner pipeline ------------------', flush=True)
+
+  print_gpu_utilization()
 
   region = 'us-east-1'
   client = boto3.client('logs', region_name=region, aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
