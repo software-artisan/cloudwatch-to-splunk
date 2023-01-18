@@ -124,7 +124,7 @@ try:
   print('------------------------------ Begin Loading Huggingface SQL summariztion model ------------------', flush=True)
   try:
     from transformers import AutoTokenizer, AutoModelWithLMHead
-    sql_tokenizer = AutoTokenizer.from_pretrained("dbernsohn/t5_wikisql_SQL2en")
+    sql_tokenizer = AutoTokenizer.from_pretrained("dbernsohn/t5_wikisql_SQL2en").to('gpu')
     summ_model = AutoModelWithLMHead.from_pretrained("dbernsohn/t5_wikisql_SQL2en")
   except Exception as err:
     print('Caught ' + str(err) + ' while loading summarization model')
@@ -133,7 +133,7 @@ try:
 
   print('------------------------------ Begin Loading Huggingface ner model ------------------', flush=True)
   try:
-    tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
+    tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english").to('gpu')
     model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
   except Exception as err:
     print('Caught ' + str(err) + ' while loading ner model')
