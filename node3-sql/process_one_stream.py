@@ -42,7 +42,6 @@ def process_one_log_stream(client, ner, sql_tokenizer, summ_model, group_name, s
                     startFromHead=True, unmask=True)
 
         events = resp['events']
-        print(f"events={events}")
         msg_list = []
         timestamp_list = []
         for event in events:
@@ -156,7 +155,7 @@ try:
   print_gpu_utilization()
 
   print('------------------------------ Begin Creating Huggingface ner pipeline ------------------', flush=True)
-  ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
+  ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple", device="cuda:0")
   print('------------------------------ After Creating Huggingface ner pipeline ------------------', flush=True)
 
   print_gpu_utilization()
