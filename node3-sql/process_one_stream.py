@@ -49,7 +49,7 @@ def process_one_log_stream(client, ner, sql_tokenizer, summ_model, group_name, s
             q_ind = event['message'].find('Query\t')
             print(f"message={event['message']}, q_ind={q_ind}")
             if q_ind >= 0:
-              input_text = f"translate SQL to English: {event['message'][q_ind:]} </s>"
+              input_text = f"translate SQL to English: {event['message'][q_ind+6:]} </s>"
               print(f"input_text={input_text}")
               features = sql_tokenizer([input_text], return_tensors='pt')
               output = summ_model.generate(input_ids=features['input_ids'].cuda(),
@@ -109,6 +109,7 @@ try:
   import re
   from urllib.parse import quote
   from infinstor import infin_boto3
+  import torch
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--access_key_id', help='aws access key id', required=True)
@@ -118,10 +119,16 @@ try:
 
   args = parser.parse_args()
 
+  print('CUDA: ' + str(torch.cuda.is_available), flush=True)
+
   print('------------------------------ Begin Loading Huggingface SQL summariztion model ------------------', flush=True)
-  from transformers import AutoTokenizer, AutoModelWithLMHead
-  sql_tokenizer = AutoTokenizer.from_pretrained("dbernsohn/t5_wikisql_SQL2en")
-  summ_model = AutoModelWithLMHead.from_pretrained("dbernsohn/t5_wikisql_SQL2en")
+  try:
+    from transformers import AutoTokenizer, AutoModelWithLMHead
+    sql_tokenizer = AutoTokenizer.from_pretrained("dbernsohn/t5_wikisql_SQL2en")
+    summ_model = AutoModelWithLMHead.from_pretrained("dbernsohn/t5_wikisql_SQL2en")
+  except Exception as err:
+    print('Caught ' + str(err) + ' while loading summarization model')
+    os._exit(os.EX_OK)
   print('------------------------------ Finished Loading Huggingface SQL summariztion model ------------------', flush=True)
 
   print('------------------------------ Begin Loading Huggingface ner model ------------------', flush=True)
@@ -130,6 +137,7 @@ try:
     model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
   except Exception as err:
     print('Caught ' + str(err) + ' while loading ner model')
+    os._exit(os.EX_OK)
   print('------------------------------ After Loading Huggingface ner model ------------------', flush=True)
 
   print('------------------------------ Begin Creating Huggingface ner pipeline ------------------', flush=True)
