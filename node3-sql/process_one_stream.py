@@ -46,7 +46,7 @@ def process_one_log_stream(client, ner, sql_tokenizer, summ_model, group_name, s
         msg_list = []
         timestamp_list = []
         for event in events:
-            q_ind = event['message'].find('Query ')
+            q_ind = event['message'].find('Query\t')
             print(f"message={event['message']}, q_ind={q_ind}")
             if q_ind >= 0:
               input_text = f"translate SQL to English: {event['message'][q_ind:]} </s>"
