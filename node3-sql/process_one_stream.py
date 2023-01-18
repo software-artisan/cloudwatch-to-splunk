@@ -53,7 +53,7 @@ def process_one_log_stream(client, ner, sql_tokenizer, summ_model, group_name, s
               features = sql_tokenizer([input_text], return_tensors='pt')
               output = summ_model.generate(input_ids=features['input_ids'].cuda(),
                         attention_mask=features['attention_mask'].cuda())
-              output_text = sql_tokenizer.decode(output[0])
+              output_text = sql_tokenizer.decode(output[0], skip_special_tokens=True)
               print(f"output_text={output_text}")
               msg_list.append(output_text)
               timestamp_list.append(datetime.fromtimestamp(event['timestamp']/1000, timezone.utc))
