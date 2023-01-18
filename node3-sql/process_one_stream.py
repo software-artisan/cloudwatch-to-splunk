@@ -119,8 +119,6 @@ try:
 
   args = parser.parse_args()
 
-  print('CUDA: ' + str(torch.cuda.is_available), flush=True)
-
   print('------------------------------ Begin Loading Huggingface SQL summariztion model ------------------', flush=True)
   try:
     from transformers import AutoTokenizer, AutoModelWithLMHead
