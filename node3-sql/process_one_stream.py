@@ -119,22 +119,22 @@ try:
 
   args = parser.parse_args()
 
-  print('------------------------------ Begin Loading Huggingface SQL summariztion model ------------------', flush=True)
+  print('------------------------------ Begin Loading Huggingface SQL summarization model ------------------', flush=True)
   try:
     from transformers import AutoTokenizer, AutoModelWithLMHead
-    sql_tokenizer = AutoTokenizer.from_pretrained("dbernsohn/t5_wikisql_SQL2en").to('gpu')
+    sql_tokenizer = AutoTokenizer.from_pretrained("dbernsohn/t5_wikisql_SQL2en").to('cuda')
     summ_model = AutoModelWithLMHead.from_pretrained("dbernsohn/t5_wikisql_SQL2en")
   except Exception as err:
-    print('Caught ' + str(err) + ' while loading summarization model')
+    print('Caught ' + str(err) + ' while loading summarization model', flush=True)
     os._exit(os.EX_OK)
   print('------------------------------ Finished Loading Huggingface SQL summariztion model ------------------', flush=True)
 
   print('------------------------------ Begin Loading Huggingface ner model ------------------', flush=True)
   try:
-    tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english").to('gpu')
+    tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english").to('cuda')
     model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
   except Exception as err:
-    print('Caught ' + str(err) + ' while loading ner model')
+    print('Caught ' + str(err) + ' while loading ner model', flush=True)
     os._exit(os.EX_OK)
   print('------------------------------ After Loading Huggingface ner model ------------------', flush=True)
 
