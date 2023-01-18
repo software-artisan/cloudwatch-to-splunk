@@ -57,7 +57,7 @@ def process_one_log_stream(client, ner, summ_pipeline, group_name, stream_name, 
             if inp_txt:
               tsql = tokenizeSql(inp_txt)
               summ = summ_pipeline([tsql])
-              output_text = summ['summary_text']
+              output_text = summ[0]['summary_text']
               print(f"output_text={output_text}")
               msg_list.append(output_text)
               timestamp_list.append(datetime.fromtimestamp(event['timestamp']/1000, timezone.utc))
