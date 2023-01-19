@@ -51,7 +51,7 @@ def process_one_log_stream(client, ner, qa_pipeline, group_name, stream_name, fi
               try:
                 result = qa_pipeline(question="is this an error?", context=inp_txt)
                 ans = result['answer']
-                print(f"QA.is this an error?={ans} with certainity {result['score']")
+                print(f"QA.is this an error?={ans} with certainity {result['score']}")
                 msg_list.append(inp_txt)
                 timestamp_list.append(datetime.fromtimestamp(event['timestamp']/1000, timezone.utc))
               except Exception as ex:
