@@ -227,7 +227,7 @@ try:
   print('------------------------------ Begin Loading Huggingface QA pipeline ------------------', flush=True)
   try:
     from transformers import pipeline
-    qa_pipeline = pipeline("question-answering", model="distilbert-base-cased-distilled-squad", revision="626af31")
+    qa_pipeline = pipeline("question-answering", model="distilbert-base-cased-distilled-squad", revision="626af31", device="cuda:0")
   except Exception as err:
     print('Caught ' + str(err) + ' while loading QA pipeline', flush=True)
     os._exit(os.EX_OK)
@@ -291,7 +291,7 @@ try:
     try:
         process_one_log_stream(client, ner, qa_pipeline, row['LogGroupName'], row['LogStreamName'],
                         row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'],
-                        s3client, args.bucket, args.prefix, int(start_time.timestamp() * 1000), int(periodic_run_start_time))
+                        s3client, args.bucket, args.prefix, int(start_time.timestamp() * 1000), int(end_time.timestamp() * 1000))
     except Exception as e2:
       print(f"Caught {e2} processing log stream. Ignoring and continuing to next log stream.." , flush=True)
   print('------------------------------ Finished Input ----------------', flush=True)
