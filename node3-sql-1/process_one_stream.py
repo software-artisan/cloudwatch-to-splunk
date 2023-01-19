@@ -56,7 +56,11 @@ def process_one_log_stream(client, ner, summ_pipeline, group_name, stream_name, 
             print(f"message={event['message']}, inp_txt={inp_txt}")
             if inp_txt:
               try:
-                tsql = tokenizeSql(inp_txt)
+                #tsql = tokenizeSql(inp_txt)
+                tsql = sanitizeSql(inp_txt)
+                if re.search('heartbeat', tsql, re.IGNORECASE):
+                  print(f"Sql {tsql} contains heartbeat. Skipping..")
+                  continue
                 summ = summ_pipeline([tsql])
                 output_text = summ[0]['summary_text']
                 print(f"output_text={output_text}")
