@@ -55,12 +55,15 @@ def process_one_log_stream(client, ner, summ_pipeline, group_name, stream_name, 
                 inp_txt = event['message'][q_ind+8:]
             print(f"message={event['message']}, inp_txt={inp_txt}")
             if inp_txt:
-              tsql = tokenizeSql(inp_txt)
-              summ = summ_pipeline([tsql])
-              output_text = summ[0]['summary_text']
-              print(f"output_text={output_text}")
-              msg_list.append(output_text)
-              timestamp_list.append(datetime.fromtimestamp(event['timestamp']/1000, timezone.utc))
+              try:
+                tsql = tokenizeSql(inp_txt)
+                summ = summ_pipeline([tsql])
+                output_text = summ[0]['summary_text']
+                print(f"output_text={output_text}")
+                msg_list.append(output_text)
+                timestamp_list.append(datetime.fromtimestamp(event['timestamp']/1000, timezone.utc))
+              except Exception as ex:
+                print(f"Caught {ex} while summarizing. Ignoring log event and continuing..")
         if not msg_list:
           print("No more messages to apply ner model to")
           break
