@@ -156,7 +156,7 @@ def tokenizeSql(code):
     table_map = {}
     column_map = {}
     for i in range(len(statements)):
-      print(f"i={i}, stmt={statements[i]}")
+      print(f"i={i}, stmt={statements[i]} result={result[i]}")
       if statements[i] in [sqlparse.tokens.Number.Integer, sqlparse.tokens.Literal.Number.Integer]:
         print(f"CODE_INTEGER")
         result[i] = "CODE_INTEGER"
@@ -166,9 +166,12 @@ def tokenizeSql(code):
       elif statements[i] in [sqlparse.tokens.Number.Hexadecimal, sqlparse.tokens.Literal.Number.Hexadecimal]:
         print(f"CODE_HEX")
         result[i] = "CODE_HEX"
-      elif statements[i] in [sqlparse.tokens.String.Symbol, sqlparse.tokens.String.Single, sqlparse.tokens.Literal.String.Single, sqlparse.tokens.Literal.String.Symbol]:
+      elif statements[i] in [sqlparse.tokens.String.Symbol, sqlparse.tokens.String.Single, sqlparse.tokens.Literal.String.Symbol]:
         result[i] = tokenizeRegex(result[i])
         print(f"TokenizedRegex={result[i]}")
+      elif statements[i] in [sqlparse.tokens.Literal.String.Single]:
+        result[i] = tokenizeRegex(result[i])[0]
+        print(f"TokenizedRegex single={result[i]}")
       elif statements[i] in[sqlparse.tokens.Name, sqlparse.tokens.Name.Placeholder, sqlparse.sql.Identifier]:
         print("AAAAA")
         old_value = result[i]
