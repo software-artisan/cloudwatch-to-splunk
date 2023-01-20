@@ -15,13 +15,13 @@ def aws_cloudwatch_url(region, log_group, log_stream, dt):
         nested_quote(log_stream) + quote_once('?start=') + nested_quote(str(dt)),
     ])
 
-def add_log_line(dt, person, all_messages, log_group, log_stream, region):
+def add_log_line(dt, msg, person, all_messages, log_group, log_stream, region):
   cw_url = aws_cloudwatch_url(region, log_group, log_stream, dt)
   print('CloudWatch URL is: ' + cw_url)
   if person in all_messages:
-    all_messages[person].append((dt.timestamp(), cw_url))
+    all_messages[person].append((dt.timestamp(), cw_url, msg))
   else:
-    all_messages[person] = [(dt.timestamp(), cw_url)]
+    all_messages[person] = [(dt.timestamp(), cw_url, msg)]
 
 def process_one_log_stream(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
@@ -62,7 +62,7 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
                 orgs.append(s_entry_word)
               elif entry['entity_group'] == 'PER':
                 persons.append(s_entry_word)
-                add_log_line(timestamp_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
+                add_log_line(timestamp_list[idx], msg_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
               elif entry['entity_group'] == 'MISC':
                 misc.append(s_entry_word)
             print(str(timestamp_list[idx]) + ": orgs=" + str(orgs) + ", persons=" + str(persons) + ", misc=" + str(misc) + " : " + msg_list[idx])
