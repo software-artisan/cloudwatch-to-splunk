@@ -129,26 +129,26 @@ try:
   print('------------------------------ Start Input ----------------', flush=True)
   df.reset_index()
 
+  if 'PERIODIC_RUN_FREQUENCY' in os.environ:
+    print(f"PERIDOIC_RUN_FREQUENCY is {os.environ['PERIODIC_RUN_FREQUENCY']}", flush=True)
+  else:
+    print('PERIDOIC_RUN_FREQUENCY is not set')
+  if 'PERIODIC_RUN_START_TIME' in os.environ:
+    print(f"PERIDOIC_RUN_START_TIME is {os.environ['PERIODIC_RUN_START_TIME']}", flush=True)
+  else:
+    print('PERIDOIC_RUN_START_TIME is not set')
+  if 'PERIODIC_RUN_END_TIME' in os.environ:
+    print(f"PERIODIC_RUN_END_TIME is {os.environ['PERIODIC_RUN_END_TIME']}", flush=True)
+  else:
+    print('PERIODIC_RUN_END_TIME is not set')
   start_time = None
   end_time = None
   periodic_run_frequency = os.getenv('PERIODIC_RUN_FREQUENCY')
   periodic_run_start_time = os.getenv('PERIODIC_RUN_START_TIME')
-  if periodic_run_frequency and periodic_run_start_time:
-    end_time = datetime.fromtimestamp(int(periodic_run_start_time)/1000, tz=timezone.utc)
-    if periodic_run_frequency == 'hourly':
-        start_time = end_time - timedelta(hours=1)
-    elif periodic_run_frequency == 'daily':
-        start_time = end_time - timedelta(days=1)
-    elif periodic_run_frequency == 'weekly':
-        start_time = end_time - timedelta(days=7)
-    elif periodic_run_frequency == 'monthly':
-        start_time = end_time - relativedelta(months=1)
-    elif periodic_run_frequency == 'yearly':
-        start_time = end_time - relativedelta(years=1)
-    else:
-      print('Error. Unknown periodic_run_frequency ' + str(periodic_run_frequency), flush=True)
-      start_time = None
-      end_time = None
+  periodic_run_end_time = os.getenv('PERIODIC_RUN_END_TIME')
+  if periodic_run_frequency and periodic_run_start_time and periodic_run_end_time:
+    start_time = datetime.fromtimestamp(int(periodic_run_start_time), tz=timezone.utc)
+    end_time = datetime.fromtimestamp(int(periodic_run_end_time), tz=timezone.utc)
     print(f'Periodic Run with frequency {periodic_run_frequency}. start_time={start_time} --> end_time={end_time}')
 
   s3client = boto3.client('s3')
@@ -158,7 +158,7 @@ try:
     try:
         process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'],
                         row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'],
-                        s3client, args.bucket, args.prefix, int(start_time.timestamp() * 1000), int(periodic_run_start_time))
+                        s3client, args.bucket, args.prefix, int(start_time.timestamp() * 1000), int(end_time.timestamp() * 1000))
     except Exception as e2:
       print(f"Caught {e2} processing log stream. Ignoring and continuing to next log stream.." , flush=True)
   print('------------------------------ Finished Input ----------------', flush=True)
