@@ -23,6 +23,16 @@ def add_log_line(dt, person, all_messages, log_group, log_stream, region):
   else:
     all_messages[person] = [(dt.timestamp(), cw_url)]
 
+def extract_sql_query(event):
+    q_ind = event['message'].find('Query\t')
+    if q_ind >= 0:
+      inp_txt = event['message'][q_ind+6:]
+    else:
+      q_ind = event['message'].find('Execute\t')
+      if q_ind >= 0:
+        inp_txt = event['message'][q_ind+8:]
+    return sanitizeSql(inp_txt)
+
 def process_one_log_stream(client, ner, qa_pipeline, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
     print(f"process_one_log_stream: Entered. grp={group_name}, strm={stream_name}", flush=True)
@@ -45,14 +55,10 @@ def process_one_log_stream(client, ner, qa_pipeline, group_name, stream_name, fi
         msg_list = []
         timestamp_list = []
         for event in events:
-            q_ind = event['message'].find('Query\t')
-            if q_ind >= 0:
-              inp_txt = event['message'][q_ind+6:]
+            if group_name.startswith('/aws/rds'):
+                inp_txt = extract_sql_query(event)
             else:
-              q_ind = event['message'].find('Execute\t')
-              if q_ind >= 0:
-                inp_txt = event['message'][q_ind+8:]
-            inp_txt = sanitizeSql(inp_txt)
+              inp_txt = event['message']
             print(f"message={event['message']}, inp_txt={inp_txt}")
             if inp_txt:
               try:
