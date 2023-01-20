@@ -45,8 +45,15 @@ def process_one_log_stream(client, ner, qa_pipeline, group_name, stream_name, fi
         msg_list = []
         timestamp_list = []
         for event in events:
-            inp_txt = event['message']
-            print(f"message={event['message']}")
+            q_ind = event['message'].find('Query\t')
+            if q_ind >= 0:
+              inp_txt = event['message'][q_ind+6:]
+            else:
+              q_ind = event['message'].find('Execute\t')
+              if q_ind >= 0:
+                inp_txt = event['message'][q_ind+8:]
+            inp_txt = sanitizeSql(inp_txt)
+            print(f"message={event['message']}, inp_txt={inp_txt}")
             if inp_txt:
               try:
                 result = qa_pipeline(question="is this an error?", context=inp_txt)
