@@ -16,12 +16,12 @@ def aws_cloudwatch_url(region, log_group, log_stream, dt):
     ])
 
 def add_log_line(dt, msg, person, all_messages, log_group, log_stream, region):
-  cw_url = aws_cloudwatch_url(region, log_group, log_stream, dt)
-  print('CloudWatch URL is: ' + cw_url)
-  if person in all_messages:
-    all_messages[person].append((dt.timestamp(), cw_url, msg))
-  else:
-    all_messages[person] = [(dt.timestamp(), cw_url, msg)]
+    cw_url = aws_cloudwatch_url(region, log_group, log_stream, dt)
+    print('CloudWatch URL is: ' + cw_url)
+    if person in all_messages:
+        all_messages[person].append((dt.timestamp(), cw_url, msg))
+    else:
+        all_messages[person] = [(dt.timestamp(), cw_url, msg)]
 
 def process_one_log_stream(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
@@ -48,123 +48,122 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
             msg_list.append(event['message'])
             timestamp_list.append(datetime.fromtimestamp(event['timestamp']/1000, timezone.utc))
         if not msg_list:
-          print("No more messages to apply model")
-          break
+            print("No more messages to apply model")
+            break
         output_list = ner(msg_list)
         for idx, one_output in enumerate(output_list):
             orgs = []
             persons = []
             misc = []
             for entry in one_output:
-              print("ner ret: Entry=" + str(entry))
-              s_entry_word = entry['word'].strip()
-              if entry['entity_group'] == 'ORG':
-                orgs.append(s_entry_word)
-              elif entry['entity_group'] == 'PER':
-                persons.append(s_entry_word)
-                add_log_line(timestamp_list[idx], msg_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
-              elif entry['entity_group'] == 'MISC':
-                misc.append(s_entry_word)
+                print("ner ret: Entry=" + str(entry))
+                s_entry_word = entry['word'].strip()
+                if entry['entity_group'] == 'ORG':
+                    orgs.append(s_entry_word)
+                elif entry['entity_group'] == 'PER':
+                    persons.append(s_entry_word)
+                    add_log_line(timestamp_list[idx], msg_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
+                elif entry['entity_group'] == 'MISC':
+                    misc.append(s_entry_word)
             print(str(timestamp_list[idx]) + ": orgs=" + str(orgs) + ", persons=" + str(persons) + ", misc=" + str(misc) + " : " + msg_list[idx])
         if ('nextForwardToken' in resp):
-          if nt == resp['nextForwardToken']:
-            break
-          else:
-            nt = resp['nextForwardToken']
+            if nt == resp['nextForwardToken']:
+                break
+            else:
+                nt = resp['nextForwardToken']
         else:
-          break
+            break
     if all_messages:
-      fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '.json'
-      with open(fn, 'w') as fp:
-        json.dump(all_messages, fp)
-      print(f"File Name = {fn}")
-      obj_name = prefix.lstrip('/').rstrip('/') + '/' + fn.lstrip('/')
-      print(f"Object Name = {obj_name}")
-      response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(first_event_time)}})
+        fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '.json'
+        with open(fn, 'w') as fp:
+            json.dump(all_messages, fp)
+        print(f"File Name = {fn}")
+        obj_name = prefix.lstrip('/').rstrip('/') + '/' + fn.lstrip('/')
+        print(f"Object Name = {obj_name}")
+        response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(first_event_time)}})
 
 try:
-  from time import time
-  import boto3
-  import os
-  import sys
-  from datetime import datetime, timezone, timedelta
-  import tzlocal
-  import argparse
-  from concurrent_plugin import concurrent_core
-  from transformers import pipeline
-  from transformers import AutoTokenizer, AutoModelForTokenClassification
-  import json
-  import urllib
-  import re
-  from urllib.parse import quote
-  from infinstor import infin_boto3
+    from time import time
+    import boto3
+    import os
+    import sys
+    from datetime import datetime, timezone, timedelta
+    import tzlocal
+    import argparse
+    from concurrent_plugin import concurrent_core
+    from transformers import pipeline
+    from transformers import AutoTokenizer, AutoModelForTokenClassification
+    import json
+    import urllib
+    import re
+    from urllib.parse import quote
+    from infinstor import infin_boto3
 
-  parser = argparse.ArgumentParser()
-  parser.add_argument('--access_key_id', help='aws access key id', required=True)
-  parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
-  parser.add_argument('--bucket', help='output bucket name', required=True)
-  parser.add_argument('--prefix', help='output prefix', required=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--access_key_id', help='aws access key id', required=True)
+    parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
+    parser.add_argument('--bucket', help='output bucket name', required=True)
+    parser.add_argument('--prefix', help='output prefix', required=True)
 
-  args = parser.parse_args()
+    args = parser.parse_args()
 
-  print('------------------------------ Begin Loading Huggingface ner model ------------------', flush=True)
-  try:
-    tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
-    model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
-  except Exception as err:
-    print('Caught ' + str(err) + ' while loading ner model')
-  print('------------------------------ After Loading Huggingface ner model ------------------', flush=True)
-
-  print('------------------------------ Begin Creating Huggingface ner pipeline ------------------', flush=True)
-  ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
-  print('------------------------------ After Creating Huggingface ner pipeline ------------------', flush=True)
-
-  region = 'us-east-1'
-  client = boto3.client('logs', region_name=region, aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
-
-  df = concurrent_core.list(None)
-  print('Column Names:', flush=True)
-  cn = df.columns.values.tolist()
-  print(str(cn))
-  print('------------------------------ Start Input ----------------', flush=True)
-  df.reset_index()
-
-  if 'PERIODIC_RUN_FREQUENCY' in os.environ:
-    print(f"PERIDOIC_RUN_FREQUENCY is {os.environ['PERIODIC_RUN_FREQUENCY']}", flush=True)
-  else:
-    print('PERIDOIC_RUN_FREQUENCY is not set')
-  if 'PERIODIC_RUN_START_TIME' in os.environ:
-    print(f"PERIDOIC_RUN_START_TIME is {os.environ['PERIODIC_RUN_START_TIME']}", flush=True)
-  else:
-    print('PERIDOIC_RUN_START_TIME is not set')
-  if 'PERIODIC_RUN_END_TIME' in os.environ:
-    print(f"PERIODIC_RUN_END_TIME is {os.environ['PERIODIC_RUN_END_TIME']}", flush=True)
-  else:
-    print('PERIODIC_RUN_END_TIME is not set')
-  start_time = None
-  end_time = None
-  periodic_run_frequency = os.getenv('PERIODIC_RUN_FREQUENCY')
-  periodic_run_start_time = os.getenv('PERIODIC_RUN_START_TIME')
-  periodic_run_end_time = os.getenv('PERIODIC_RUN_END_TIME')
-  if periodic_run_frequency and periodic_run_start_time and periodic_run_end_time:
-    start_time = datetime.fromtimestamp(int(periodic_run_start_time), tz=timezone.utc)
-    end_time = datetime.fromtimestamp(int(periodic_run_end_time), tz=timezone.utc)
-    print(f'Periodic Run with frequency {periodic_run_frequency}. start_time={start_time} --> end_time={end_time}')
-
-  s3client = boto3.client('s3')
-
-  for ind, row in df.iterrows():
-    print("Input row=" + str(row), flush=True)
+    print('------------------------------ Begin Loading Huggingface ner model ------------------', flush=True)
     try:
-        process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'],
-                        row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'],
-                        s3client, args.bucket, args.prefix, int(start_time.timestamp() * 1000), int(end_time.timestamp() * 1000))
-    except Exception as e2:
-      print(f"Caught {e2} processing log stream. Ignoring and continuing to next log stream.." , flush=True)
-  print('------------------------------ Finished Input ----------------', flush=True)
+        tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
+        model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
+    except Exception as err:
+        print('Caught ' + str(err) + ' while loading ner model')
+    print('------------------------------ After Loading Huggingface ner model ------------------', flush=True)
 
-  os._exit(os.EX_OK)
+    print('------------------------------ Begin Creating Huggingface ner pipeline ------------------', flush=True)
+    ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
+    print('------------------------------ After Creating Huggingface ner pipeline ------------------', flush=True)
+
+    region = 'us-east-1'
+    client = boto3.client('logs', region_name=region, aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
+
+    df = concurrent_core.list(None)
+    print('Column Names:', flush=True)
+    cn = df.columns.values.tolist()
+    print(str(cn))
+    print('------------------------------ Start Input ----------------', flush=True)
+    df.reset_index()
+
+    if 'PERIODIC_RUN_FREQUENCY' in os.environ:
+        print(f"PERIDOIC_RUN_FREQUENCY is {os.environ['PERIODIC_RUN_FREQUENCY']}", flush=True)
+    else:
+        print('PERIDOIC_RUN_FREQUENCY is not set')
+    if 'PERIODIC_RUN_START_TIME' in os.environ:
+        print(f"PERIDOIC_RUN_START_TIME is {os.environ['PERIODIC_RUN_START_TIME']}", flush=True)
+    else:
+        print('PERIDOIC_RUN_START_TIME is not set')
+    if 'PERIODIC_RUN_END_TIME' in os.environ:
+        print(f"PERIODIC_RUN_END_TIME is {os.environ['PERIODIC_RUN_END_TIME']}", flush=True)
+    else:
+        print('PERIODIC_RUN_END_TIME is not set')
+    start_time = None
+    end_time = None
+    periodic_run_frequency = os.getenv('PERIODIC_RUN_FREQUENCY')
+    periodic_run_start_time = os.getenv('PERIODIC_RUN_START_TIME')
+    periodic_run_end_time = os.getenv('PERIODIC_RUN_END_TIME')
+    if periodic_run_frequency and periodic_run_start_time and periodic_run_end_time:
+        start_time = datetime.fromtimestamp(int(periodic_run_start_time), tz=timezone.utc)
+        end_time = datetime.fromtimestamp(int(periodic_run_end_time), tz=timezone.utc)
+        print(f'Periodic Run with frequency {periodic_run_frequency}. start_time={start_time} --> end_time={end_time}')
+
+    s3client = boto3.client('s3')
+
+    for ind, row in df.iterrows():
+        print("Input row=" + str(row), flush=True)
+        try:
+            process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'],
+                            row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'],
+                            s3client, args.bucket, args.prefix, int(start_time.timestamp() * 1000), int(end_time.timestamp() * 1000))
+        except Exception as e2:
+            print(f"Caught {e2} processing log stream. Ignoring and continuing to next log stream.." , flush=True)
+    print('------------------------------ Finished Input ----------------', flush=True)
+
+    os._exit(os.EX_OK)
 except Exception as e1:
-  print("Caught " + str(e1), flush=True)
-  os._exit(os.EX_OK)
-
+    print("Caught " + str(e1), flush=True)
+    os._exit(os.EX_OK)
