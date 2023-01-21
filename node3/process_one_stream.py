@@ -52,20 +52,20 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
             break
         output_list = ner(msg_list)
         for idx, one_output in enumerate(output_list):
-            orgs = []
-            persons = []
             misc = []
+            orgs_and_persons = []
             for entry in one_output:
                 print("ner ret: Entry=" + str(entry))
                 s_entry_word = entry['word'].strip()
                 if entry['entity_group'] == 'ORG':
-                    orgs.append(s_entry_word)
+                    orgs_and_persons.append(s_entry_word)
+                    add_log_line(timestamp_list[idx], msg_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
                 elif entry['entity_group'] == 'PER':
-                    persons.append(s_entry_word)
+                    orgs_and_persons.append(s_entry_word)
                     add_log_line(timestamp_list[idx], msg_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
                 elif entry['entity_group'] == 'MISC':
                     misc.append(s_entry_word)
-            print(str(timestamp_list[idx]) + ": orgs=" + str(orgs) + ", persons=" + str(persons) + ", misc=" + str(misc) + " : " + msg_list[idx])
+            print(str(timestamp_list[idx]) + ": orgs_and_persons=" + str(orgs_and_persons) + ", misc=" + str(misc) + " : " + msg_list[idx])
         if ('nextForwardToken' in resp):
             if nt == resp['nextForwardToken']:
                 break
