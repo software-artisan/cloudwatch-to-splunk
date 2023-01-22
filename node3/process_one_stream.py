@@ -45,7 +45,7 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
         msg_list = []
         timestamp_list = []
         for idx, event in enumerate(events):
-            msg_list.append(event['message'])
+            msg_list.append(event['message'][29:])
             timestamp_list.append(datetime.fromtimestamp(event['timestamp']/1000, timezone.utc))
         if not msg_list:
             print("No more messages to apply model")
