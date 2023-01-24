@@ -23,16 +23,21 @@ def add_log_line(dt, msg, person, all_messages, log_group, log_stream, region):
     else:
         all_messages[person] = [(dt.timestamp(), cw_url, msg)]
 
-def extract_resource_path(msg_minus_ts):
-    # e.g. blah.blah.blah, 'resourcePath': '/2.0/mlflow/parallels/list-periodicruns',
-    print(f"extract_resource_path: Entered. m={msg_minus_ts}", flush=True)
-    rp_ind = msg_minus_ts.find('resourcePath')
+def extract_path(msg_minus_ts):
+    # e.g. blah.blah.blah, 'path': '/2.0/mlflow/parallels/list-periodicruns',
+    print(f"extract_path: Entered. m={msg_minus_ts}", flush=True)
+    rp_ind = msg_minus_ts.find('path')
     if rp_ind >= 0:
-        m1 = msg_minus_ts[rp_ind + len('resourcePath') + 4:]
-        print(f"extract_resource_path: m1={m1}", flush=True)
-        q_ind = m1.find("'")
+        m1 = msg_minus_ts[rp_ind + len('path') + 4:]
+        print(f"extract_path: m1={m1}", flush=True)
+        if m1[-1] == "'":
+            q_ind = m1.find("'")
+        elif m1[-1] == '"':
+            q_ind = m1.find('"')
+        else
+            return None
         if q_ind > 0:
-            print(f"extract_resource_path: returning={m1[q_ind:]}", flush=True)
+            print(f"extract_path: returning={m1[q_ind:]}", flush=True)
             return m1[q_ind:]
         return None
     return None
@@ -61,7 +66,7 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
         for idx, event in enumerate(events):
             msg_minus_ts = event['message'][29:]
             if group_name.startswith('/aws/lambda') and 'resourcePath' in msg_minus_ts:
-                rp = extract_resource_path(msg_minus_ts)
+                rp = extract_path(msg_minus_ts)
                 if rp:
                     print(f"Found resourcePath {rp}. Adding {msg_minus_ts} to index")
                     add_log_line(datetime.fromtimestamp(event['timestamp']/1000, timezone.utc), msg_minus_ts,
