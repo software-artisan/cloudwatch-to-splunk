@@ -34,7 +34,7 @@ def extract_path(msg_minus_ts):
             q_ind = m1.find("'")
         elif m1[-1] == '"':
             q_ind = m1.find('"')
-        else
+        else:
             return None
         if q_ind > 0:
             print(f"extract_path: returning={m1[q_ind:]}", flush=True)
