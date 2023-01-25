@@ -48,7 +48,7 @@ def extract_path(msg_minus_ts):
                     return None
                 else:
                     print(f"extract_path: returning={m2[:q_ind]}", flush=True)
-                    return m2[q_ind:]
+                    return m2[:q_ind]
         else:
             m2 = m1[rp_ind + 1:]
             print(f"extract_path: m2={m2}", flush=True)
@@ -57,7 +57,7 @@ def extract_path(msg_minus_ts):
                 return None
             else:
                 print(f"extract_path: returning={m2[:q_ind]}", flush=True)
-                return m2[q_ind:]
+                return m2[:q_ind]
     return None
 
 def process_one_log_stream(client, ner, group_name, stream_name, first_event_time, last_event_time,
