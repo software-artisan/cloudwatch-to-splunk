@@ -47,7 +47,7 @@ def extract_path(msg_minus_ts):
                 if rp_ind < 0:
                     return None
                 else:
-                    print(f"extract_path: returning={m2[q_ind:]}", flush=True)
+                    print(f"extract_path: returning={m2[:q_ind]}", flush=True)
                     return m2[q_ind:]
         else:
             m2 = m1[rp_ind + 1:]
@@ -56,7 +56,7 @@ def extract_path(msg_minus_ts):
             if rp_ind < 0:
                 return None
             else:
-                print(f"extract_path: returning={m2[q_ind:]}", flush=True)
+                print(f"extract_path: returning={m2[:q_ind]}", flush=True)
                 return m2[q_ind:]
     return None
 
