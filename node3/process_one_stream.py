@@ -25,20 +25,32 @@ def add_log_line(dt, msg, person, all_messages, log_group, log_stream, region):
 
 def extract_path(msg_minus_ts):
     # e.g. blah.blah.blah, 'path': '/2.0/mlflow/parallels/list-periodicruns',
+    # e.g. blah.blah.blah, "path":"/customerinfo",
     print(f"extract_path: Entered. m={msg_minus_ts}", flush=True)
     rp_ind = msg_minus_ts.find('path')
     if rp_ind >= 0:
-        m1 = msg_minus_ts[rp_ind + len('path') + 4:]
+        m0 = msg_minus_ts[rp_ind + len('path'):]
+        rp_ind = m0.find(':')
+        if rp_ind < 0:
+            return None
+        m1 = m0[rp_ind + 1:]
         print(f"extract_path: m1={m1}", flush=True)
-        if m1[-1] == "'":
-            q_ind = m1.find("'")
-        elif m1[-1] == '"':
-            q_ind = m1.find('"')
+        rp_ind = m1.find('"')
+        if rp_ind < 0:
+            rp_ind = m1.find("'")
+        if rp_ind < 0:
+            return None
+        m2 = m1[rp_ind + 1:]
+        print(f"extract_path: m2={m2}", flush=True)
+        if m2[-1] == "'":
+            q_ind = m2.find("'")
+        elif m2[-1] == '"':
+            q_ind = m2.find('"')
         else:
             return None
         if q_ind > 0:
-            print(f"extract_path: returning={m1[q_ind:]}", flush=True)
-            return m1[q_ind:]
+            print(f"extract_path: returning={m2[q_ind:]}", flush=True)
+            return m2[q_ind:]
         return None
     return None
 
