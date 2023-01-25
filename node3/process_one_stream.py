@@ -23,41 +23,22 @@ def add_log_line(dt, msg, person, all_messages, log_group, log_stream, region):
     else:
         all_messages[person] = [(dt.timestamp(), cw_url, msg)]
 
-def extract_path(msg_minus_ts):
+def extract_path(msg):
     # e.g. blah.blah.blah, 'path': '/2.0/mlflow/parallels/list-periodicruns',
     # e.g. blah.blah.blah, "path":"/customerinfo",
-    print(f"extract_path: Entered. m={msg_minus_ts}", flush=True)
-    rp_ind = msg_minus_ts.find('path')
-    if rp_ind >= 0:
-        m0 = msg_minus_ts[rp_ind + len('path'):]
-        rp_ind = m0.find(':')
-        if rp_ind < 0:
-            return None
-        m1 = m0[rp_ind + 1:]
-        print(f"extract_path: m1={m1}", flush=True)
-        rp_ind = m1.find('"')
-        if rp_ind < 0:
-            rp_ind = m1.find("'")
-            if rp_ind < 0:
-                return None
-            else:
-                m2 = m1[rp_ind + 1:]
-                print(f"extract_path: m2={m2}", flush=True)
-                q_ind = m2.find("'")
-                if rp_ind < 0:
-                    return None
-                else:
-                    print(f"extract_path: returning={m2[:q_ind]}", flush=True)
-                    return m2[:q_ind]
-        else:
-            m2 = m1[rp_ind + 1:]
-            print(f"extract_path: m2={m2}", flush=True)
-            q_ind = m2.find('"')
-            if rp_ind < 0:
-                return None
-            else:
-                print(f"extract_path: returning={m2[:q_ind]}", flush=True)
-                return m2[:q_ind]
+    print(f"extract_path: Entered. msg={msg}", flush=True)
+    match = re.search("path' *: *'([^']*)", msg)
+    if match:
+        print("found", match.group(1))
+        return match.group(1)
+    else:
+        print("path with single quotes not found")
+    match = re.search('path" *: *"([^"]*)', msg)
+    if match:
+        print("found", match.group(1))
+        return match.group(1)
+    else:
+        print("path with double quotes not found")
     return None
 
 def process_one_log_stream(client, ner, group_name, stream_name, first_event_time, last_event_time,
@@ -82,15 +63,16 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
         msg_list = []
         timestamp_list = []
         for idx, event in enumerate(events):
-            msg_minus_ts = event['message'][29:]
-            if group_name.startswith('/aws/lambda') and 'resourcePath' in msg_minus_ts:
-                rp = extract_path(msg_minus_ts)
+            msg = event['message']
+            print(f"Processing msg={msg}")
+            if group_name.startswith('/aws/lambda') and 'resourcePath' in msg:
+                rp = extract_path(msg)
                 if rp:
-                    print(f"Found resourcePath {rp}. Adding {msg_minus_ts} to index")
-                    add_log_line(datetime.fromtimestamp(event['timestamp']/1000, timezone.utc), msg_minus_ts,
+                    print(f"Found resourcePath {rp}. Adding {msg} to index")
+                    add_log_line(datetime.fromtimestamp(event['timestamp']/1000, timezone.utc), msg,
                                     rp, all_messages, group_name, stream_name, region)
             else:
-                msg_list.append(msg_minus_ts)
+                msg_list.append(msg)
                 timestamp_list.append(datetime.fromtimestamp(event['timestamp']/1000, timezone.utc))
         if not msg_list:
             print("No more messages to apply model")
