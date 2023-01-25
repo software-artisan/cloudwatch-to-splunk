@@ -38,20 +38,26 @@ def extract_path(msg_minus_ts):
         rp_ind = m1.find('"')
         if rp_ind < 0:
             rp_ind = m1.find("'")
-        if rp_ind < 0:
-            return None
-        m2 = m1[rp_ind + 1:]
-        print(f"extract_path: m2={m2}", flush=True)
-        if m2[-1] == "'":
-            q_ind = m2.find("'")
-        elif m2[-1] == '"':
-            q_ind = m2.find('"')
+            if rp_ind < 0:
+                return None
+            else:
+                m2 = m1[rp_ind + 1:]
+                print(f"extract_path: m2={m2}", flush=True)
+                q_ind = m2.find("'")
+                if rp_ind < 0:
+                    return None
+                else:
+                    print(f"extract_path: returning={m2[q_ind:]}", flush=True)
+                    return m2[q_ind:]
         else:
-            return None
-        if q_ind > 0:
-            print(f"extract_path: returning={m2[q_ind:]}", flush=True)
-            return m2[q_ind:]
-        return None
+            m2 = m1[rp_ind + 1:]
+            print(f"extract_path: m2={m2}", flush=True)
+            q_ind = m2.find('"')
+            if rp_ind < 0:
+                return None
+            else:
+                print(f"extract_path: returning={m2[q_ind:]}", flush=True)
+                return m2[q_ind:]
     return None
 
 def process_one_log_stream(client, ner, group_name, stream_name, first_event_time, last_event_time,
