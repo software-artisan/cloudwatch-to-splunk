@@ -155,7 +155,9 @@ try:
     region = 'us-east-1'
     client = boto3.client('logs', region_name=region, aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
 
+    print('------------------------------ Before concurrent_core.list ------------------', flush=True)
     df = concurrent_core.list(None)
+    print('------------------------------ After concurrent_core.list ------------------', flush=True)
     print('Column Names:', flush=True)
     cn = df.columns.values.tolist()
     print(str(cn))
