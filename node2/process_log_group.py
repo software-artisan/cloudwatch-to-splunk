@@ -84,8 +84,13 @@ try:
     parser = argparse.ArgumentParser()
     parser.add_argument('--access_key_id', help='aws access key id', required=True)
     parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
+    parser.add_argument('--override_start_time', help='set to override periodic run start time', required=True)
 
     args = parser.parse_args()
+
+    if args.override_start_time != "ignore":
+        start_time = datetime.fromtimestamp(int(args.override_start_time), tz=timezone.utc)
+        print(f'Overriding Periodic Run Start Time using parameter. New Start Time={start_time}')
 
     region = 'us-east-1'
     client = boto3.client('logs', region_name=region, aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)

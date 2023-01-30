@@ -8,4 +8,5 @@ entry_points:
     parameters:
       access_key_id: {type: string}
       secret_access_key: {type: string}
+      override_start_time: {type: string, default: ignore}
     command: "python3 process_log_group.py --access_key_id={access_key_id} --secret_access_key={secret_access_key}"
