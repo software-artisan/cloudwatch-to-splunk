@@ -1,6 +1,9 @@
 FROM nvidia/cuda:11.2.2-cudnn8-devel-ubuntu20.04
 LABEL maintainer="Hugging Face"
 
+RUN echo "net.ipv4.tcp_tw_recycle = 1" >> /etc/sysctl.conf
+RUN echo "net.ipv4.tcp_tw_reuse = 1" >> /etc/sysctl.conf
+
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Use login shell to read variables from `~/.profile` (to pass dynamic created variables between RUN commands)
