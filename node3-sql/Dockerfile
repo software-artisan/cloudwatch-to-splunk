@@ -60,4 +60,4 @@ RUN python3 -c "from transformers import AutoTokenizer, AutoModelForTokenClassif
 RUN python3 -c "from transformers import AutoTokenizer, AutoModelWithLMHead; tokenizer = AutoTokenizer.from_pretrained('dbernsohn/t5_wikisql_SQL2en'); model = AutoModelWithLMHead.from_pretrained('dbernsohn/t5_wikisql_SQL2en')"
 
 RUN ln -s /usr/bin/python3 /usr/bin/python
-ARG CACHEBUST=9
+ARG CACHEBUST=10

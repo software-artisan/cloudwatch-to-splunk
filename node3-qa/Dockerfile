@@ -58,7 +58,7 @@ RUN python3 -m pip install --no-cache-dir sentencepiece
 RUN python3 -c "from transformers import pipeline; nlp = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')"
 RUN python3 -c "from transformers import AutoTokenizer, AutoModelForTokenClassification; tokenizer = AutoTokenizer.from_pretrained('Jean-Baptiste/roberta-large-ner-english'); model = AutoModelForTokenClassification.from_pretrained('Jean-Baptiste/roberta-large-ner-english');"
 
-ARG CACHEBUST=10
+ARG CACHEBUST=11
 RUN python3 -c "from transformers import pipeline; qp = pipeline('question-answering', model='distilbert-base-cased-distilled-squad', revision='626af31', device=-1);"
 
 RUN ln -s /usr/bin/python3 /usr/bin/python
