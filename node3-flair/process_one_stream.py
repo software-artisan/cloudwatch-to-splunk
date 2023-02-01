@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+articles = ['a', 'an', 'the']
+demonstrative_pronouns = ['this', 'that', 'these', 'those']
+misc = ['there']
+
 def quote_once(s):
     return quote(s, safe="").replace("%", "$")
 
@@ -17,11 +21,21 @@ def aws_cloudwatch_url(region, log_group, log_stream, dt):
 
 def add_log_line(dt, msg, person, all_messages, log_group, log_stream, region):
     cw_url = aws_cloudwatch_url(region, log_group, log_stream, dt)
-    print('CloudWatch URL is: ' + cw_url)
+    print(f'add_log_line: {dt} : {person} : {msg} : URL={cw_url}')
     if person in all_messages:
         all_messages[person].append((dt.timestamp(), cw_url, msg))
     else:
         all_messages[person] = [(dt.timestamp(), cw_url, msg)]
+
+def do_flair(tagger, tm, msg, all_messages, group_name, stream_name, region):
+    sentence = Sentence(msg.strip())
+    tagger.predict(sentence)
+    for entity in sentence.get_spans('np'):
+        if entity.tag != 'NP':
+            continue
+        ent = entity.text.strip().lower()
+        if ent not in articles and ent not in demonstrative_pronouns and ent not in misc:
+            add_log_line(tm, msg, ent, all_messages, group_name, stream_name, region)
 
 def extract_path(msg):
     # e.g. blah.blah.blah, 'path': '/2.0/mlflow/parallels/list-periodicruns',
@@ -40,12 +54,6 @@ def extract_path(msg):
     else:
         print("path with double quotes not found")
     return None
-
-def do_flair(tagger, tm, msg, all_messages, group_name, stream_name, region):
-    sentence = Sentence(msg.strip())
-    tagger.predict(sentence)
-    for entity in sentence.get_spans('np'):
-        print(entity)
 
 def process_one_log_stream(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
