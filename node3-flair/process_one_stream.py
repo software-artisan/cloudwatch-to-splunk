@@ -145,6 +145,7 @@ try:
     parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
     parser.add_argument('--bucket', help='output bucket name', required=True)
     parser.add_argument('--prefix', help='output prefix', required=True)
+    parser.add_argument('--override_start_time', help='set to override periodic run start time', required=True)
 
     args = parser.parse_args()
 
