@@ -26,16 +26,25 @@ def add_log_line(dt, msg, person, all_messages, log_group, log_stream, region):
         all_messages[person].append((dt.timestamp(), cw_url, msg))
     else:
         all_messages[person] = [(dt.timestamp(), cw_url, msg)]
+    elen = len(person) + 16 + len(cw_url) + len(msg)
+    elen = elen + (elen * 0.2)
+    return elen
 
 def do_flair(tagger, tm, msg, all_messages, group_name, stream_name, region):
+    slen = 0
     sentence = Sentence(msg.strip())
+    before = datetime.utcnow()
     tagger.predict(sentence)
+    delta = before - datetime.utcnow()
+    print(f"Time to run flair on {msg}: {delta}")
     for entity in sentence.get_spans('np'):
         if entity.tag != 'NP':
             continue
         ent = entity.text.strip().lower()
         if ent not in articles and ent not in demonstrative_pronouns and ent not in misc:
-            add_log_line(tm, msg, ent, all_messages, group_name, stream_name, region)
+            llen = add_log_line(tm, msg, ent, all_messages, group_name, stream_name, region)
+            slen = slen + llen
+    return slen
 
 def extract_path(msg):
     # e.g. blah.blah.blah, 'path': '/2.0/mlflow/parallels/list-periodicruns',
@@ -55,11 +64,12 @@ def extract_path(msg):
         print("path with double quotes not found")
     return None
 
-def process_one_log_stream(client, ner, group_name, stream_name, first_event_time, last_event_time,
+def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
     print(f"process_one_log_stream: Entered. grp={group_name}, strm={stream_name}", flush=True)
     print(f"  first_event_time={first_event_time}, last_event_time={last_event_time} output=s3://{bucket}/{prefix}", flush=True)
     print(f"  start_time_epochs={start_time_epochms}, end_time_epochs={end_time_epochms}", flush=True)
+    total_len = 0
     all_messages = {}
     nt = None
     while (True):
@@ -76,20 +86,23 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
         events = resp['events']
         msg_list = []
         timestamp_list = []
-        tagger = SequenceTagger.load("flair/chunk-english")
         for idx, event in enumerate(events):
             msg = event['message']
             tm = datetime.fromtimestamp(event['timestamp']/1000, timezone.utc)
             print(f"Processing msg={msg}")
-            do_flair(tagger, tm, msg, all_messages, group_name, stream_name, region)
+            tlen = do_flair(tagger, tm, msg, all_messages, group_name, stream_name, region)
+            total_len = total_len + tlen
             # run NER through every line
             msg_list.append(msg)
             timestamp_list.append(tm)
 
         if not msg_list:
-            print("No more messages to apply model")
+            print("No more messages to apply ner model to")
             break
+        before = datetime.utcnow()
         output_list = ner(msg_list)
+        delta = before - datetime.utcnow()
+        print(f"Time to run ner on {len(msg_list)} msgs: {delta}")
         for idx, one_output in enumerate(output_list):
             misc = []
             orgs_and_persons = []
@@ -98,10 +111,12 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
                 s_entry_word = entry['word'].strip()
                 if entry['entity_group'] == 'ORG':
                     orgs_and_persons.append(s_entry_word)
-                    add_log_line(timestamp_list[idx], msg_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
+                    alen = add_log_line(timestamp_list[idx], msg_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
+                    total_len = total_len + alen
                 elif entry['entity_group'] == 'PER':
                     orgs_and_persons.append(s_entry_word)
-                    add_log_line(timestamp_list[idx], msg_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
+                    alen = add_log_line(timestamp_list[idx], msg_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
+                    total_len = total_len + alen
                 elif entry['entity_group'] == 'MISC':
                     misc.append(s_entry_word)
             print(str(timestamp_list[idx]) + ": orgs_and_persons=" + str(orgs_and_persons) + ", misc=" + str(misc) + " : " + msg_list[idx])
@@ -113,7 +128,7 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
         else:
             break
     if all_messages:
-        fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '.json'
+        fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '-' + str(first_event_time) + '.json'
         with open(fn, 'w') as fp:
             json.dump(all_messages, fp, ensure_ascii=True, indent=4, sort_keys=True)
         print(f"File Name = {fn}")
@@ -149,30 +164,6 @@ try:
 
     args = parser.parse_args()
 
-    print('------------------------------ Begin Loading Huggingface ner model ------------------', flush=True)
-    try:
-        tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
-        model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
-    except Exception as err:
-        print('Caught ' + str(err) + ' while loading ner model')
-    print('------------------------------ After Loading Huggingface ner model ------------------', flush=True)
-
-    print('------------------------------ Begin Creating Huggingface ner pipeline ------------------', flush=True)
-    ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
-    print('------------------------------ After Creating Huggingface ner pipeline ------------------', flush=True)
-
-    region = 'us-east-1'
-    client = boto3.client('logs', region_name=region, aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
-
-    print('------------------------------ Before concurrent_core.list ------------------', flush=True)
-    df = concurrent_core.list(None)
-    print('------------------------------ After concurrent_core.list ------------------', flush=True)
-    print('Column Names:', flush=True)
-    cn = df.columns.values.tolist()
-    print(str(cn))
-    print('------------------------------ Start Input ----------------', flush=True)
-    df.reset_index()
-
     if 'PERIODIC_RUN_FREQUENCY' in os.environ:
         print(f"PERIDOIC_RUN_FREQUENCY is {os.environ['PERIODIC_RUN_FREQUENCY']}", flush=True)
     else:
@@ -198,18 +189,42 @@ try:
         start_time = datetime.fromtimestamp(int(args.override_start_time), tz=timezone.utc)
         print(f'Overriding Periodic Run Start Time using parameter. New Start Time={start_time}')
 
+    print('------------------------------ Begin Loading Huggingface ner model ------------------', flush=True)
+    try:
+        tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
+        model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
+    except Exception as err:
+        print('Caught ' + str(err) + ' while loading ner model')
+    print('------------------------------ After Loading Huggingface ner model ------------------', flush=True)
+
+    print('------------------------------ Begin Creating Huggingface ner pipeline ------------------', flush=True)
+    ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="max")
+    print('------------------------------ After Creating Huggingface ner pipeline ------------------', flush=True)
+
+    print('------------------------------ Begin Creating Huggingface SequenceTagger ------------------', flush=True)
+    tagger = SequenceTagger.load("flair/chunk-english")
+    print('------------------------------ After Creating Huggingface SequenceTagger ------------------', flush=True)
+
+    region = 'us-east-1'
+    client = boto3.client('logs', region_name=region, aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
+
+    print('------------------------------ Before concurrent_core.list ------------------', flush=True)
+    df = concurrent_core.list(None)
+    print('------------------------------ After concurrent_core.list ------------------', flush=True)
+
+    print('------------------------------ Start Processing LogStreams ----------------', flush=True)
+    df.reset_index()
     s3client = boto3.client('s3')
 
     for ind, row in df.iterrows():
         print("Input row=" + str(row), flush=True)
         try:
-            process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'],
+            process_one_log_stream(client, tagger, ner, row['LogGroupName'], row['LogStreamName'],
                             row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'],
                             s3client, args.bucket, args.prefix, int(start_time.timestamp() * 1000), int(end_time.timestamp() * 1000))
         except Exception as e2:
             print(f"Caught {e2} processing log stream. Ignoring and continuing to next log stream.." , flush=True)
-    print('------------------------------ Finished Input ----------------', flush=True)
-
+    print('------------------------------ Finished Processing LogStreams. Program finished ----------------', flush=True)
     os._exit(os.EX_OK)
 except Exception as e1:
     print("Caught " + str(e1), flush=True)
