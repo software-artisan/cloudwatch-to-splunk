@@ -189,14 +189,14 @@ try:
     end_time = None
     periodic_run_frequency = os.getenv('PERIODIC_RUN_FREQUENCY')
     periodic_run_start_time = os.getenv('PERIODIC_RUN_START_TIME')
-    if args.override_start_time != "ignore":
-        start_time = datetime.fromtimestamp(int(args.override_start_time), tz=timezone.utc)
-        print(f'Overriding Periodic Run Start Time using parameter. New Start Time={start_time}')
     periodic_run_end_time = os.getenv('PERIODIC_RUN_END_TIME')
     if periodic_run_frequency and periodic_run_start_time and periodic_run_end_time:
         start_time = datetime.fromtimestamp(int(periodic_run_start_time), tz=timezone.utc)
         end_time = datetime.fromtimestamp(int(periodic_run_end_time), tz=timezone.utc)
         print(f'Periodic Run with frequency {periodic_run_frequency}. start_time={start_time} --> end_time={end_time}')
+    if args.override_start_time != "ignore":
+        start_time = datetime.fromtimestamp(int(args.override_start_time), tz=timezone.utc)
+        print(f'Overriding Periodic Run Start Time using parameter. New Start Time={start_time}')
 
     s3client = boto3.client('s3')
 
