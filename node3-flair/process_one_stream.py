@@ -21,7 +21,6 @@ def aws_cloudwatch_url(region, log_group, log_stream, dt):
 
 def add_log_line(dt, msg, person, all_messages, log_group, log_stream, region):
     cw_url = aws_cloudwatch_url(region, log_group, log_stream, dt)
-    print(f'add_log_line: {dt} : {person} : {msg} : URL={cw_url}')
     if person in all_messages:
         all_messages[person].append((dt.timestamp(), cw_url, msg))
     else:
@@ -95,31 +94,32 @@ def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_e
             # run NER through every line
             msg_list.append(msg)
             timestamp_list.append(tm)
+        print(f"Finished flair model. total_len={total_len}, all_messages len={len(all_messages)}")
 
         if not msg_list:
             print("No more messages to apply ner model to")
             break
+        else:
+            print(f"Applying NER model to {len(all_messages)} messages")
         before = datetime.utcnow()
         output_list = ner(msg_list)
         delta = datetime.utcnow() - before
         print(f"Time to run ner on {len(msg_list)} msgs: {delta}")
         for idx, one_output in enumerate(output_list):
             misc = []
-            orgs_and_persons = []
             for entry in one_output:
                 print("ner ret: Entry=" + str(entry))
                 s_entry_word = entry['word'].strip()
                 if entry['entity_group'] == 'ORG':
-                    orgs_and_persons.append(s_entry_word)
                     alen = add_log_line(timestamp_list[idx], msg_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
                     total_len = total_len + alen
                 elif entry['entity_group'] == 'PER':
-                    orgs_and_persons.append(s_entry_word)
                     alen = add_log_line(timestamp_list[idx], msg_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
                     total_len = total_len + alen
                 elif entry['entity_group'] == 'MISC':
                     misc.append(s_entry_word)
-            print(str(timestamp_list[idx]) + ": orgs_and_persons=" + str(orgs_and_persons) + ", misc=" + str(misc) + " : " + msg_list[idx])
+        print(f"Finished NER model. total_len={total_len}, all_messages len={len(all_messages)}")
+
         if ('nextForwardToken' in resp):
             if nt == resp['nextForwardToken']:
                 break
