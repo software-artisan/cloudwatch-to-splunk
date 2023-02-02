@@ -35,8 +35,8 @@ def do_flair(tagger, tm, msg, all_messages, group_name, stream_name, region):
     sentence = Sentence(msg.strip())
     before = datetime.utcnow()
     tagger.predict(sentence)
-    delta = before - datetime.utcnow()
-    print(f"Time to run flair on {msg}: {delta}")
+    delta = datetime.utcnow() - before
+    print(f"Time to run flair on msg: {delta}")
     for entity in sentence.get_spans('np'):
         if entity.tag != 'NP':
             continue
@@ -101,7 +101,7 @@ def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_e
             break
         before = datetime.utcnow()
         output_list = ner(msg_list)
-        delta = before - datetime.utcnow()
+        delta = datetime.utcnow() - before
         print(f"Time to run ner on {len(msg_list)} msgs: {delta}")
         for idx, one_output in enumerate(output_list):
             misc = []
@@ -217,7 +217,6 @@ try:
     s3client = boto3.client('s3')
 
     for ind, row in df.iterrows():
-        print("Input row=" + str(row), flush=True)
         try:
             process_one_log_stream(client, tagger, ner, row['LogGroupName'], row['LogStreamName'],
                             row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'],
