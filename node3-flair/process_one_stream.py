@@ -100,14 +100,12 @@ def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_e
             print("No more messages to apply ner model to")
             break
         else:
-            print(f"Applying NER model to {len(all_messages)} messages")
+            print(f"Applying NER model to {len(msg_list)} messages")
         before = datetime.utcnow()
         output_list = ner(msg_list)
         delta = datetime.utcnow() - before
         print(f"Time to run ner on {len(msg_list)} msgs: {delta}")
-        print(f"AAAAAAAAAAAAAAAAAA {len(output_list)}")
         for idx, one_output in enumerate(output_list):
-            print(f"ner ret: one_output={one_output}")
             misc = []
             for entry in one_output:
                 s_entry_word = entry['word'].strip()
@@ -193,17 +191,17 @@ try:
     print('------------------------------ Begin Loading Huggingface ner model ------------------', flush=True)
     try:
         tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
-        model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english")
+        model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/roberta-large-ner-english").to('cuda')
     except Exception as err:
         print('Caught ' + str(err) + ' while loading ner model')
     print('------------------------------ After Loading Huggingface ner model ------------------', flush=True)
 
     print('------------------------------ Begin Creating Huggingface ner pipeline ------------------', flush=True)
-    ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="max")
+    ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple", device="cuda:0")
     print('------------------------------ After Creating Huggingface ner pipeline ------------------', flush=True)
 
     print('------------------------------ Begin Creating Huggingface SequenceTagger ------------------', flush=True)
-    tagger = SequenceTagger.load("flair/chunk-english")
+    tagger = SequenceTagger.load("flair/chunk-english").to('cuda')
     print('------------------------------ After Creating Huggingface SequenceTagger ------------------', flush=True)
 
     region = 'us-east-1'
