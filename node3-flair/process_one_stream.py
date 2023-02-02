@@ -105,10 +105,11 @@ def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_e
         output_list = ner(msg_list)
         delta = datetime.utcnow() - before
         print(f"Time to run ner on {len(msg_list)} msgs: {delta}")
+        print(f"AAAAAAAAAAAAAAAAAA {len(output_list)}")
         for idx, one_output in enumerate(output_list):
+            print(f"ner ret: one_output={one_output}")
             misc = []
             for entry in one_output:
-                print("ner ret: Entry=" + str(entry))
                 s_entry_word = entry['word'].strip()
                 if entry['entity_group'] == 'ORG':
                     alen = add_log_line(timestamp_list[idx], msg_list[idx], s_entry_word, all_messages, group_name, stream_name, region)
