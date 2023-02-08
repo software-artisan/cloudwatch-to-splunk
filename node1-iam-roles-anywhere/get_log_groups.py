@@ -47,7 +47,7 @@ try:
             print('pg=' + str(pg), flush=True)
             for group in pg['logGroups']:
                 if args.groupname_startswith and not group['logGroupName'].startswith(args.groupname_startswith):
-                    print(f"Group name {group['logGroupName']} does not start with {args.groupname_startswith}. Skipping group..")
+                    print(f"Group name {group['logGroupName']} does not start with {args.groupname_startswith}. Skipping group..", flush=True)
                 else:
                     print(f"Choosing group {group['logGroupName']}", flush=True)
                     fn = '/tmp/emptyfile-' + str(ind)

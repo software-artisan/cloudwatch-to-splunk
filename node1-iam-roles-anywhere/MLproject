@@ -1,7 +1,7 @@
-name: infin-logs-node1-roles-anywhere
+name: infin-logs-node1-iam-roles-anywhere
 
 docker_env:
-  image:  infin-logs-node1-roles-anywhere
+  image:  infin-logs-node1-iam-roles-anywhere
 
 entry_points:
   main:
