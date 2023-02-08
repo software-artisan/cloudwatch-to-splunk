@@ -1,0 +1,10 @@
+name: infin-logs-node1-roles-anywhere
+
+docker_env:
+  image:  infin-logs-node1-roles-anywhere
+
+entry_points:
+  main:
+    parameters:
+      groupname_startswith: {type:string}
+    command: "python3 get_log_groups.py --aws_profile_iam_roles_anywhere subscriber_cloudwatch_iam_roles_anywhere --groupname_startswith={groupname_startswith}"
