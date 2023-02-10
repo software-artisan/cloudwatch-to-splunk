@@ -39,7 +39,7 @@ def do_flair(tagger, tm, msg, all_messages, group_name, stream_name, region):
     for entity in sentence.get_spans('np'):
         if entity.tag != 'NP':
             continue
-        ent = entity.text.strip().lower()
+        ent = entity.text.strip("\"' \t-").lower()
         if ent not in articles and ent not in demonstrative_pronouns and ent not in misc:
             llen = add_log_line(tm, msg, ent, all_messages, group_name, stream_name, region)
             slen = slen + llen
