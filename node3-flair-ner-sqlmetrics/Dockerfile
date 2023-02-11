@@ -59,5 +59,6 @@ RUN cd transformers && python3 setup.py develop
 RUN python3 -c "from transformers import pipeline; nlp = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')"
 RUN python3 -c "from transformers import AutoTokenizer, AutoModelForTokenClassification; tokenizer = AutoTokenizer.from_pretrained('Jean-Baptiste/roberta-large-ner-english'); model = AutoModelForTokenClassification.from_pretrained('Jean-Baptiste/roberta-large-ner-english');"
 RUN python3 -c "from flair.models import SequenceTagger; tagger = SequenceTagger.load('flair/ner-english');"
+RUN python3 -c "import nltk; nltk.download('punkt');"
 RUN ln -s /usr/bin/python3 /usr/bin/python
 ARG CACHEBUST=10
