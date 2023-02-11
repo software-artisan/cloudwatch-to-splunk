@@ -89,7 +89,7 @@ def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_e
             msg = event['message']
             tm = datetime.fromtimestamp(event['timestamp']/1000, timezone.utc)
             print(f"Processing msg={msg}")
-            tlen = 0 # do_flair(tagger, tm, msg, all_messages, group_name, stream_name, region)
+            tlen = do_flair(tagger, tm, msg, all_messages, group_name, stream_name, region)
             total_len = total_len + tlen
             # run NER through every line
             msg_list.append(msg)
