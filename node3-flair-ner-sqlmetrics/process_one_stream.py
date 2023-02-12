@@ -81,8 +81,7 @@ def extract_metrics(line):
             timestamps.append(ts)
             continue
         except Exception as ex:
-            print(f"extract_metrics: Caught {ex} while parsing timestamp. Aborting line: {line}")
-            return
+            pass
 
         parts = re.split(',| |_|-|!|:|\)|\(|=|"|\'', t)
         for part in parts:
