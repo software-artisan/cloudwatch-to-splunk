@@ -154,7 +154,7 @@ def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_e
             tlen = do_flair(tagger, tm, msg, all_messages, group_name, stream_name, region)
             total_len = total_len + tlen
             # extract metrics from message
-            extract_metrics(msg)
+            extract_metrics(f"EVENTS {event['timestamp']} {msg}")
             # run NER through every line
             msg_list.append(msg)
             timestamp_list.append(tm)
