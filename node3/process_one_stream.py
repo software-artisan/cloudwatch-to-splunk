@@ -125,10 +125,13 @@ try:
     import re
     from urllib.parse import quote
     from infinstor import infin_boto3
+    from typing import TYPE_CHECKING
+    if TYPE_CHECKING:
+        from mypy_boto3_cloudwatch.client import CloudWatchClient
+    else:
+        CloudWatchClient = object
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--access_key_id', help='aws access key id', required=True)
-    parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
     parser.add_argument('--bucket', help='output bucket name', required=True)
     parser.add_argument('--prefix', help='output prefix', required=True)
 
@@ -147,7 +150,8 @@ try:
     print('------------------------------ After Creating Huggingface ner pipeline ------------------', flush=True)
 
     region = 'us-east-1'
-    client = boto3.client('logs', region_name=region, aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
+    session:boto3.session.Session = boto3.session.Session(profile_name=args.aws_profile_iam_roles_anywhere)
+    client:CloudWatchClient = session.client('logs', region_name=region)
 
     df = concurrent_core.list(None)
     print('Column Names:', flush=True)

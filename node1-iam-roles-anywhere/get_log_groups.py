@@ -26,8 +26,8 @@ try:
     periodic_run_start_time = os.getenv('PERIODIC_RUN_START_TIME')
 
     parser = argparse.ArgumentParser(description="Reads cloudwatch logs and copies them for further processing downstream.")
-    parser.add_argument('--aws_profile_iam_roles_anywhere', required=False, default='subscriber_cloudwatch_iam_roles_anywhere', 
-                        help='Relies on aws profile named "subscriber_cloudwatch_iam_roles_anywhere" which uses IAM roles anywhere to access the cloudwatch logs in the subscriber account.  This profile needs to be setup before running this script')
+    parser.add_argument('--aws_profile_iam_roles_anywhere', required=False, default='subscriber_infinlogs_iam_roles_anywhere', 
+                        help='Relies on aws profile named "subscriber_infinlogs_iam_roles_anywhere" which uses IAM roles anywhere to access the cloudwatch logs in the subscriber account.  This profile needs to be setup before running this script')
     parser.add_argument('--groupname_startswith', help='only choose log group names that start with this', required=False)
 
     args = parser.parse_args()

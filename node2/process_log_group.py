@@ -58,6 +58,11 @@ try:
     import urllib
     import re
     from urllib.parse import quote
+    from typing import TYPE_CHECKING
+    if TYPE_CHECKING:
+        from mypy_boto3_cloudwatch.client import CloudWatchClient
+    else:
+        CloudWatchClient = object
 
     if 'PERIODIC_RUN_FREQUENCY' in os.environ:
         print(f"PERIDOIC_RUN_FREQUENCY is {os.environ['PERIODIC_RUN_FREQUENCY']}", flush=True)
@@ -82,8 +87,8 @@ try:
         print(f'Periodic Run with frequency {periodic_run_frequency}. start_time={start_time} --> end_time={end_time}')
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--access_key_id', help='aws access key id', required=True)
-    parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
+    parser.add_argument('--aws_profile_iam_roles_anywhere', required=False, default='subscriber_infinlogs_iam_roles_anywhere', 
+                        help='Relies on aws profile named "subscriber_infinlogs_iam_roles_anywhere" which uses IAM roles anywhere to access the cloudwatch logs in the subscriber account.  This profile needs to be setup before running this script')
     parser.add_argument('--override_start_time', help='set to override periodic run start time', required=True)
 
     args = parser.parse_args()
@@ -93,7 +98,8 @@ try:
         print(f'Overriding Periodic Run Start Time using parameter. New Start Time={start_time}')
 
     region = 'us-east-1'
-    client = boto3.client('logs', region_name=region, aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
+    session:boto3.session.Session = boto3.session.Session(profile_name=args.aws_profile_iam_roles_anywhere)
+    client:CloudWatchClient = session.client('logs', region_name=region)
 
     df = concurrent_core.list(None)
     print('Column Names:', flush=True)
