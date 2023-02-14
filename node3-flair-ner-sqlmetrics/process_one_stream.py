@@ -63,6 +63,67 @@ def extract_path(msg):
         print("path with double quotes not found")
     return None
 
+skip_indices = set([0])
+unique_keys = dict()
+
+def extract_metrics(line):
+    #tokens =  nltk.word_tokenize("EVENTS  1675666424284   2023-02-06T06:53:43.250943Z   12 Query  INSERT INTO mysql.rds_heartbeat2(id, value) values (1,1675666423240) ON DUPLICATE KEY UPDATE value = 1675666423240      1675666423250")
+    tokens = nltk.word_tokenize(line)
+    timestamps = []
+    text_strings = []
+    numbers = []
+    for idx, t in enumerate(tokens):
+        if idx in skip_indices:
+            continue
+        #Parse timestamp
+        try:
+            ts = parse_timestamp(t)
+            timestamps.append(ts)
+            continue
+        except Exception as ex:
+            pass
+
+        parts = re.split(',| |_|-|!|:|\)|\(|=|"|\'', t)
+        for part in parts:
+            part = re.sub(r'[^\w\s]','',part)
+            part = part.strip().lower()
+            if not part:
+                continue
+            if part in stopwords.words('english'):
+                continue
+            try:
+                ts = parse_timestamp(t)
+                timestamps.append(ts)
+            except:
+                try:
+                    num = float(part)
+                    numbers.append(num)
+                except Exception as ex:
+                    text_strings.append(part)
+    log_key = ' '.join(text_strings)
+    print(log_key, numbers, timestamps)
+    if log_key not in unique_keys:
+        unique_keys[log_key] = 0
+    unique_keys[log_key] += 1
+
+def parse_timestamp(t):
+    try:
+        ts = pd.to_datetime(t)
+    except Exception as ex:
+        num = float(t)
+        curr_time = time.time()
+        if curr_time - 365*24*60*60 < num < curr_time + 365*24*60*60:
+            ts = pd.to_datetime(num)
+        elif curr_time - 365*24*60*60 < num / 1e3 < curr_time + 365*24*60*60:
+            ts = pd.to_datetime(num, unit='ms')
+        elif curr_time - 365*24*60*60 < num / 1e6 < curr_time + 365*24*60*60:
+            ts = pd.to_datetime(num, unit='us')
+        elif curr_time - 365 * 24 * 60 * 60 < num / 1e9 < curr_time + 365 * 24 * 60 * 60:
+            ts = pd.to_datetime(num, unit='ns')
+        else:
+            raise Exception('Not a timestamp')
+    return ts
+
 def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
     print(f"process_one_log_stream: Entered. grp={group_name}, strm={stream_name}", flush=True)
@@ -91,10 +152,32 @@ def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_e
             print(f"Processing msg={msg}")
             tlen = do_flair(tagger, tm, msg, all_messages, group_name, stream_name, region)
             total_len = total_len + tlen
+            # extract metrics from message
+            extract_metrics(f"EVENTS {event['timestamp']} {msg}")
             # run NER through every line
             msg_list.append(msg)
             timestamp_list.append(tm)
         print(f"Finished flair model. total_len={total_len}, all_messages len={len(all_messages)}")
+
+        print(f"Unique keys from metrics search={len(unique_keys)}")
+        for key, val in unique_keys.items():
+            print(key, "[{}]".format(val))
+
+        print(f"Before applying NER to metrics search keys")
+        before = datetime.utcnow()
+        olist = ner(list(unique_keys.keys()))
+        for idx, one_output in enumerate(olist):
+            misc = []
+            for entry in one_output:
+                s_entry_word = entry['word'].strip()
+                if entry['entity_group'] == 'ORG':
+                    print(f"Metrics ORG={s_entry_word}")
+                elif entry['entity_group'] == 'PER':
+                    print(f"Metrics PER={s_entry_word}")
+                elif entry['entity_group'] == 'MISC':
+                    print(f"Metrics MISC={s_entry_word}")
+        delta = datetime.utcnow() - before
+        print(f"After applying NER to metrics search keys. Time={delta}")
 
         if not msg_list:
             print("No more messages to apply ner model to")
@@ -153,6 +236,11 @@ try:
     from infinstor import infin_boto3
     from flair.data import Sentence
     from flair.models import SequenceTagger
+    import pandas as pd
+    import nltk
+    from nltk.corpus import stopwords
+    import re
+    import time
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--access_key_id', help='aws access key id', required=True)
