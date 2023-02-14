@@ -163,6 +163,16 @@ def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_e
         for key, val in unique_keys.items():
             print(key, "[{}]".format(val))
 
+        print(f"Before applying NER to metrics search keys")
+        before = datetime.utcnow()
+        olist = ner(unique_keys.keys())
+        delta = datetime.utcnow() - before
+        print(f"After applying NER to metrics search keys. Time={delta}")
+        print("Printing olist")
+        for ky in olist:
+            print(f"  {ky}")
+        print("Done printing olist")
+
         if not msg_list:
             print("No more messages to apply ner model to")
             break
