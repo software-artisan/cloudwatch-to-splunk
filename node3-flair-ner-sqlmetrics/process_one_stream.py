@@ -165,7 +165,7 @@ def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_e
 
         print(f"Before applying NER to metrics search keys")
         before = datetime.utcnow()
-        olist = ner(unique_keys.keys())
+        olist = ner(list(unique_keys.keys()))
         for idx, one_output in enumerate(olist):
             misc = []
             for entry in one_output:
