@@ -64,9 +64,9 @@ def extract_path(msg):
     return None
 
 skip_indices = set([0])
-unique_keys = dict()
 
-def extract_metrics(line):
+def extract_metrics(event, unique_keys):
+    line = f"EVENTS {event['timestamp']} {event['message']}"
     #tokens =  nltk.word_tokenize("EVENTS  1675666424284   2023-02-06T06:53:43.250943Z   12 Query  INSERT INTO mysql.rds_heartbeat2(id, value) values (1,1675666423240) ON DUPLICATE KEY UPDATE value = 1675666423240      1675666423250")
     tokens = nltk.word_tokenize(line)
     timestamps = []
@@ -103,8 +103,8 @@ def extract_metrics(line):
     log_key = ' '.join(text_strings)
     print(log_key, numbers, timestamps)
     if log_key not in unique_keys:
-        unique_keys[log_key] = 0
-    unique_keys[log_key] += 1
+        unique_keys[log_key] = [(event['timestamp'], event['message'], numbers, timestamps)]
+    unique_keys[log_key] = unique_keys[log_key].append((event['timestamp'], event['message'], numbers, timestamps))
 
 def parse_timestamp(t):
     try:
@@ -124,11 +124,79 @@ def parse_timestamp(t):
             raise Exception('Not a timestamp')
     return ts
 
-def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_event_time, last_event_time,
+def process_one_log_stream_sql(client, tagger, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
-    print(f"process_one_log_stream: Entered. grp={group_name}, strm={stream_name}", flush=True)
-    print(f"  first_event_time={first_event_time}, last_event_time={last_event_time} output=s3://{bucket}/{prefix}", flush=True)
-    print(f"  start_time_epochs={start_time_epochms}, end_time_epochs={end_time_epochms}", flush=True)
+    print(f"process_one_log_stream_sql: Entered. grp={group_name}, strm={stream_name}", flush=True)
+    total_len = 0
+    all_messages = {}
+    unique_keys = dict()
+    nt = None
+    while (True):
+        print(f".... nt={nt}, len_all_msgs={len(all_messages)}", flush=True)
+        if nt:
+            resp = client.get_log_events(logGroupName=group_name, logStreamName=stream_name,
+                    startTime=start_time_epochms, endTime=end_time_epochms,
+                    startFromHead=True, nextToken=nt, unmask=True)
+        else:
+            resp = client.get_log_events(logGroupName=group_name, logStreamName=stream_name,
+                    startTime=start_time_epochms, endTime=end_time_epochms,
+                    startFromHead=True, unmask=True)
+
+        events = resp['events']
+        for idx, event in enumerate(events):
+            msg = event['message']
+            tm = datetime.fromtimestamp(event['timestamp']/1000, timezone.utc)
+            print(f"Processing msg={msg}")
+            # extract metrics from message
+            extract_metrics(event, unique_keys)
+        print(f"Finished extracting metrics. Unique keys from metrics search={len(unique_keys)}")
+        # unique keys is a dict that maps the extracted unique keys to an array of the following tuple:
+        # (timestamp of line in epoch ms, message line, array of numbers extracted from line, array of timestamps extracted from line)
+
+        for key, val in unique_keys.items():
+            print(f"unique_key={key}: Number of lines with this unique key={len(val)}")
+            for ov in val:
+                print(f"  line={val[1]}, Numbers={val[2]}, Timestamps={val[3]}")
+
+        print(f"Before applying NER to metrics search keys")
+        before = datetime.utcnow()
+        inp = list(unique_keys.keys())
+        olist = ner(inp)
+        for idx, one_output in enumerate(olist):
+            misc = []
+            for entry in one_output:
+                s_entry_word = entry['word'].strip()
+                if entry['entity_group'] == 'ORG':
+                    print(f"Metrics ORG={s_entry_word} :: {inp[idx]}")
+                elif entry['entity_group'] == 'PER':
+                    print(f"Metrics PER={s_entry_word} :: {inp[idx]}")
+                    for oi in unique_keys[inp[idx]]:
+                        alen = add_log_line(oi[0], oi[1], s_entry_word, all_messages, group_name, stream_name, region)
+                    total_len = total_len + alen
+                elif entry['entity_group'] == 'MISC':
+                    print(f"Metrics MISC={s_entry_word} :: {inp[idx]}")
+        delta = datetime.utcnow() - before
+        print(f"After applying NER to metrics search keys. Time={delta}")
+
+        if ('nextForwardToken' in resp):
+            if nt == resp['nextForwardToken']:
+                break
+            else:
+                nt = resp['nextForwardToken']
+        else:
+            break
+    if all_messages:
+        fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '-' + str(first_event_time) + '.json'
+        with open(fn, 'w') as fp:
+            json.dump(all_messages, fp, ensure_ascii=True, indent=4, sort_keys=True)
+        print(f"File Name = {fn}")
+        obj_name = prefix.lstrip('/').rstrip('/') + '/' + fn.lstrip('/')
+        print(f"Object Name = {obj_name}")
+        response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(first_event_time)}})
+
+def process_one_log_stream_general(client, tagger, ner, group_name, stream_name, first_event_time, last_event_time,
+                            region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
+    print(f"process_one_log_stream_general: Entered. grp={group_name}, strm={stream_name}", flush=True)
     total_len = 0
     all_messages = {}
     nt = None
@@ -152,33 +220,12 @@ def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_e
             print(f"Processing msg={msg}")
             tlen = do_flair(tagger, tm, msg, all_messages, group_name, stream_name, region)
             total_len = total_len + tlen
-            # extract metrics from message
-            extract_metrics(f"EVENTS {event['timestamp']} {msg}")
             # run NER through every line
             msg_list.append(msg)
             timestamp_list.append(tm)
+            print(f"TEMPORARILY DONE AFTER ONE MESSAGE")
+            break
         print(f"Finished flair model. total_len={total_len}, all_messages len={len(all_messages)}")
-
-        print(f"Unique keys from metrics search={len(unique_keys)}")
-        for key, val in unique_keys.items():
-            print(key, "[{}]".format(val))
-
-        print(f"Before applying NER to metrics search keys")
-        before = datetime.utcnow()
-        inp = list(unique_keys.keys())
-        olist = ner(inp)
-        for idx, one_output in enumerate(olist):
-            misc = []
-            for entry in one_output:
-                s_entry_word = entry['word'].strip()
-                if entry['entity_group'] == 'ORG':
-                    print(f"Metrics ORG={s_entry_word} :: {inp[idx]}")
-                elif entry['entity_group'] == 'PER':
-                    print(f"Metrics PER={s_entry_word} :: {inp[idx]}")
-                elif entry['entity_group'] == 'MISC':
-                    print(f"Metrics MISC={s_entry_word} :: {inp[idx]}")
-        delta = datetime.utcnow() - before
-        print(f"After applying NER to metrics search keys. Time={delta}")
 
         if not msg_list:
             print("No more messages to apply ner model to")
@@ -219,6 +266,17 @@ def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_e
         print(f"Object Name = {obj_name}")
         response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(first_event_time)}})
 
+def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_event_time, last_event_time,
+                            region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
+    print(f"process_one_log_stream: Entered. grp={group_name}, strm={stream_name}", flush=True)
+    print(f"  first_event_time={first_event_time}, last_event_time={last_event_time} output=s3://{bucket}/{prefix}", flush=True)
+    print(f"  start_time_epochs={start_time_epochms}, end_time_epochs={end_time_epochms}", flush=True)
+    if group_name.startswith("/aws/rds"):
+        process_one_log_stream_sql(client, tagger, ner, group_name, stream_name, first_event_time, last_event_time,
+                            region, s3client, bucket, prefix, start_time_epochms, end_time_epochms)
+    else:
+        process_one_log_stream_general(client, tagger, ner, group_name, stream_name, first_event_time, last_event_time,
+                            region, s3client, bucket, prefix, start_time_epochms, end_time_epochms)
 try:
     from time import time
     import boto3
