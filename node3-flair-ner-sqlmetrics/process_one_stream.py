@@ -165,17 +165,18 @@ def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_e
 
         print(f"Before applying NER to metrics search keys")
         before = datetime.utcnow()
-        olist = ner(list(unique_keys.keys()))
+        inp = list(unique_keys.keys())
+        olist = ner(inp)
         for idx, one_output in enumerate(olist):
             misc = []
             for entry in one_output:
                 s_entry_word = entry['word'].strip()
                 if entry['entity_group'] == 'ORG':
-                    print(f"Metrics ORG={s_entry_word}")
+                    print(f"Metrics ORG={s_entry_word} :: {inp[idx]}")
                 elif entry['entity_group'] == 'PER':
-                    print(f"Metrics PER={s_entry_word}")
+                    print(f"Metrics PER={s_entry_word} :: {inp[idx]}")
                 elif entry['entity_group'] == 'MISC':
-                    print(f"Metrics MISC={s_entry_word}")
+                    print(f"Metrics MISC={s_entry_word} :: {inp[idx]}")
         delta = datetime.utcnow() - before
         print(f"After applying NER to metrics search keys. Time={delta}")
 
