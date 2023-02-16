@@ -125,7 +125,7 @@ def parse_timestamp(t):
             raise Exception('Not a timestamp')
     return ts
 
-def process_one_log_stream_sql(client, tagger, ner, group_name, stream_name, first_event_time, last_event_time,
+def process_one_log_stream_sql(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
     print(f"process_one_log_stream_sql: Entered. grp={group_name}, strm={stream_name}", flush=True)
     total_len = 0
@@ -157,7 +157,7 @@ def process_one_log_stream_sql(client, tagger, ner, group_name, stream_name, fir
         for key, val in unique_keys.items():
             print(f"unique_key={key}: Number of lines with this unique key={len(val)}")
             for ov in val:
-                print(f"  line={val[1]}, Numbers={val[2]}, Timestamps={val[3]}")
+                print(f"  line={ov[1]}, Numbers={ov[2]}, Timestamps={ov[3]}")
 
         print(f"Before applying NER to metrics search keys")
         before = datetime.utcnow()
@@ -195,9 +195,14 @@ def process_one_log_stream_sql(client, tagger, ner, group_name, stream_name, fir
         print(f"Object Name = {obj_name}")
         response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(first_event_time)}})
 
-def process_one_log_stream_general(client, tagger, ner, group_name, stream_name, first_event_time, last_event_time,
+def process_one_log_stream_general(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
     print(f"process_one_log_stream_general: Entered. grp={group_name}, strm={stream_name}", flush=True)
+
+    print('------------------------------ Begin Creating Huggingface SequenceTagger ------------------', flush=True)
+    tagger = SequenceTagger.load("flair/chunk-english").to('cuda')
+    print('------------------------------ After Creating Huggingface SequenceTagger ------------------', flush=True)
+
     total_len = 0
     all_messages = {}
     nt = None
@@ -267,16 +272,16 @@ def process_one_log_stream_general(client, tagger, ner, group_name, stream_name,
         print(f"Object Name = {obj_name}")
         response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(first_event_time)}})
 
-def process_one_log_stream(client, tagger, ner, group_name, stream_name, first_event_time, last_event_time,
+def process_one_log_stream(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
     print(f"process_one_log_stream: Entered. grp={group_name}, strm={stream_name}", flush=True)
     print(f"  first_event_time={first_event_time}, last_event_time={last_event_time} output=s3://{bucket}/{prefix}", flush=True)
     print(f"  start_time_epochs={start_time_epochms}, end_time_epochs={end_time_epochms}", flush=True)
     if group_name.startswith("/aws/rds"):
-        process_one_log_stream_sql(client, tagger, ner, group_name, stream_name, first_event_time, last_event_time,
+        process_one_log_stream_sql(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms)
     else:
-        process_one_log_stream_general(client, tagger, ner, group_name, stream_name, first_event_time, last_event_time,
+        process_one_log_stream_general(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms)
 try:
     from time import time
@@ -348,10 +353,6 @@ try:
     ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple", device="cuda:0")
     print('------------------------------ After Creating Huggingface ner pipeline ------------------', flush=True)
 
-    print('------------------------------ Begin Creating Huggingface SequenceTagger ------------------', flush=True)
-    tagger = SequenceTagger.load("flair/chunk-english").to('cuda')
-    print('------------------------------ After Creating Huggingface SequenceTagger ------------------', flush=True)
-
     region = 'us-east-1'
     client = boto3.client('logs', region_name=region, aws_access_key_id=args.access_key_id, aws_secret_access_key=args.secret_access_key)
 
@@ -365,7 +366,7 @@ try:
 
     for ind, row in df.iterrows():
         try:
-            process_one_log_stream(client, tagger, ner, row['LogGroupName'], row['LogStreamName'],
+            process_one_log_stream(client, ner, row['LogGroupName'], row['LogStreamName'],
                             row['LogStreamFirstEventTime'], row['LogStreamLastEventTime'], row['region'],
                             s3client, args.bucket, args.prefix, int(start_time.timestamp() * 1000), int(end_time.timestamp() * 1000))
         except Exception as e2:
