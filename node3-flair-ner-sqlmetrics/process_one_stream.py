@@ -105,7 +105,7 @@ def extract_metrics(event, unique_keys):
     if log_key not in unique_keys:
         unique_keys[log_key] = [(event['timestamp'], event['message'], numbers, timestamps)]
     else:
-        unique_keys[log_key] = unique_keys[log_key].append((event['timestamp'], event['message'], numbers, timestamps))
+        unique_keys[log_key].append((event['timestamp'], event['message'], numbers, timestamps))
 
 def parse_timestamp(t):
     try:
