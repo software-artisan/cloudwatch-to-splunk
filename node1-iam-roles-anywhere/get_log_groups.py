@@ -34,6 +34,7 @@ try:
     print(f"Using aws IAM roles anywhere profile={args.aws_profile_iam_roles_anywhere}")
     
     groupname_startswith = args.groupname_startswith if args.groupname_startswith and args.groupname_startswith != 'ignore' else None
+    print(f"args.groupname_startswith={args.groupname_startswith}; groupname_startswith={groupname_startswith}")
     
     session:boto3.session.Session = boto3.session.Session(profile_name=args.aws_profile_iam_roles_anywhere)
     client:CloudWatchClient = session.client('logs', region_name='us-east-1')
