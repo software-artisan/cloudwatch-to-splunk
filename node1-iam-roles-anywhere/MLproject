@@ -6,5 +6,5 @@ docker_env:
 entry_points:
   main:
     parameters:
-      groupname_startswith: {type:string, default:''}
+      groupname_startswith: {type:string, default:'ignore'}
     command: "python3 get_log_groups.py --aws_profile_iam_roles_anywhere subscriber_infinlogs_iam_roles_anywhere --groupname_startswith={groupname_startswith}"

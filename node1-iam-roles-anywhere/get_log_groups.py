@@ -28,10 +28,12 @@ try:
     parser = argparse.ArgumentParser(description="Reads cloudwatch logs and copies them for further processing downstream.")
     parser.add_argument('--aws_profile_iam_roles_anywhere', required=False, default='subscriber_infinlogs_iam_roles_anywhere', 
                         help='Relies on aws profile named "subscriber_infinlogs_iam_roles_anywhere" which uses IAM roles anywhere to access the cloudwatch logs in the subscriber account.  This profile needs to be setup before running this script')
-    parser.add_argument('--groupname_startswith', help='only choose log group names that start with this', required=False)
+    parser.add_argument('--groupname_startswith', help="only choose log group names that start with this value. If this value is 'ignore', then the behaviour is as if this argument wasn't specified", required=False)
 
     args = parser.parse_args()
     print(f"Using aws IAM roles anywhere profile={args.aws_profile_iam_roles_anywhere}")
+    
+    groupname_startswith = args.groupname_startswith if args.groupname_startswith and args.groupname_startswith != 'ignore' else None
     
     session:boto3.session.Session = boto3.session.Session(profile_name=args.aws_profile_iam_roles_anywhere)
     client:CloudWatchClient = session.client('logs', region_name='us-east-1')
@@ -45,20 +47,21 @@ try:
             page_iterator = paginator.paginate(limit=50)
         for pg in page_iterator:
             print('pg=' + str(pg), flush=True)
-            for group in pg['logGroups']:
-                if args.groupname_startswith and not group['logGroupName'].startswith(args.groupname_startswith):
-                    print(f"Group name {group['logGroupName']} does not start with {args.groupname_startswith}. Skipping group..", flush=True)
-                else:
+            for group in pg['logGroups']:                
+                if not groupname_startswith or (groupname_startswith and group['logGroupName'].startswith(groupname_startswith)):
                     print(f"Choosing group {group['logGroupName']}", flush=True)
                     fn = '/tmp/emptyfile-' + str(ind)
                     open(fn, 'a').close()
                     ind = ind + 1
                     concurrent_core.concurrent_log_artifact(fn, "dummy", LogGroupName=group['logGroupName'])
+                else :
+                    print(f"Group name {group['logGroupName']} does not start with {groupname_startswith}. Skipping group..", flush=True)
         if 'NextToken' in page_iterator:
             nextToken = page_iterator['NextToken']
         else:
             break
 except Exception as e1:
     print('Caught ' + str(e1), flush=True)
-    traceback.print_exception(*sys.exc_info())
+    traceback.print_exc()
+
 os._exit(os.EX_OK)
