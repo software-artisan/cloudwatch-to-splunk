@@ -229,8 +229,6 @@ def process_one_log_stream_general(client, ner, group_name, stream_name, first_e
             # run NER through every line
             msg_list.append(msg)
             timestamp_list.append(tm)
-            print(f"TEMPORARILY DONE AFTER ONE MESSAGE")
-            break
         print(f"Finished flair model. total_len={total_len}, all_messages len={len(all_messages)}")
 
         if not msg_list:
