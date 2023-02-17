@@ -20,6 +20,7 @@ def aws_cloudwatch_url(region, log_group, log_stream, dt):
     ])
 
 def add_log_line(dt, msg, person, all_messages, log_group, log_stream, region):
+    print(f"add_log_line: Entered. date={dt}, person={person}, msg={msg}, log_group={log_group}, log_stream={log_stream}")
     cw_url = aws_cloudwatch_url(region, log_group, log_stream, dt)
     if person in all_messages:
         all_messages[person].append((dt.timestamp(), cw_url, msg))
@@ -152,7 +153,7 @@ def process_one_log_stream_sql(client, ner, group_name, stream_name, first_event
             extract_metrics(event, unique_keys)
         print(f"Finished extracting metrics. Unique keys from metrics search={len(unique_keys)}")
         # unique keys is a dict that maps the extracted unique keys to an array of the following tuple:
-        # (timestamp of line in epoch ms, message line, array of numbers extracted from line, array of timestamps extracted from line)
+        # [(timestamp of line in epoch ms, message line, array of numbers extracted from line, array of timestamps extracted from line)]
 
         for key, val in unique_keys.items():
             print(f"unique_key={key}: Number of lines with this unique key={len(val)}")
