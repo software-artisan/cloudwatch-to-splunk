@@ -172,8 +172,10 @@ def process_one_log_stream_sql(client, ner, group_name, stream_name, first_event
                     print(f"Metrics ORG={s_entry_word} :: {inp[idx]}")
                 elif entry['entity_group'] == 'PER':
                     print(f"Metrics PER={s_entry_word} :: {inp[idx]}")
+                    nms = s_entry_word.split()
                     for oi in unique_keys[inp[idx]]:
-                        alen = add_log_line(datetime.fromtimestamp(oi[0]/1000, timezone.utc), oi[1], s_entry_word, all_messages, group_name, stream_name, region)
+                        for nmse in nms:
+                            alen = add_log_line(datetime.fromtimestamp(oi[0]/1000, timezone.utc), oi[1], nmse, all_messages, group_name, stream_name, region)
                     total_len = total_len + alen
                 elif entry['entity_group'] == 'MISC':
                     print(f"Metrics MISC={s_entry_word} :: {inp[idx]}")
