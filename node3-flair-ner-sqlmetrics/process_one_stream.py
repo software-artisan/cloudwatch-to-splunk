@@ -129,6 +129,8 @@ def parse_timestamp(t):
 def process_one_log_stream_sql(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
     print(f"process_one_log_stream_sql: Entered. grp={group_name}, strm={stream_name}", flush=True)
+    print(f"  first_event_time={first_event_time}, last_event_time={last_event_time} output=s3://{bucket}/{prefix}", flush=True)
+    print(f"  start_time_epochs={start_time_epochms}, end_time_epochs={end_time_epochms}", flush=True)
     total_len = 0
     all_messages = {}
     unique_keys = dict()
@@ -202,6 +204,8 @@ def process_one_log_stream_sql(client, ner, group_name, stream_name, first_event
 def process_one_log_stream_general(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
     print(f"process_one_log_stream_general: Entered. grp={group_name}, strm={stream_name}", flush=True)
+    print(f"  first_event_time={first_event_time}, last_event_time={last_event_time} output=s3://{bucket}/{prefix}", flush=True)
+    print(f"  start_time_epochs={start_time_epochms}, end_time_epochs={end_time_epochms}", flush=True)
 
     print('------------------------------ Begin Creating Huggingface SequenceTagger ------------------', flush=True)
     tagger = SequenceTagger.load("flair/chunk-english").to('cuda')
@@ -279,12 +283,25 @@ def process_one_log_stream(client, ner, group_name, stream_name, first_event_tim
     print(f"process_one_log_stream: Entered. grp={group_name}, strm={stream_name}", flush=True)
     print(f"  first_event_time={first_event_time}, last_event_time={last_event_time} output=s3://{bucket}/{prefix}", flush=True)
     print(f"  start_time_epochs={start_time_epochms}, end_time_epochs={end_time_epochms}", flush=True)
-    if group_name.startswith("/aws/rds"):
-        process_one_log_stream_sql(client, ner, group_name, stream_name, first_event_time, last_event_time,
-                            region, s3client, bucket, prefix, start_time_epochms, end_time_epochms)
-    else:
-        process_one_log_stream_general(client, ner, group_name, stream_name, first_event_time, last_event_time,
-                            region, s3client, bucket, prefix, start_time_epochms, end_time_epochms)
+    ten_minutes = (10 * 60 * 1000)
+    new_start = start_time_epochms
+    while (end_time_epochms - start_time_epochms) > ten_minutes:
+        new_start = end_time_epochms - ten_minutes
+        if group_name.startswith("/aws/rds"):
+            process_one_log_stream_sql(client, ner, group_name, stream_name, first_event_time, last_event_time,
+                                region, s3client, bucket, prefix, new_start, end_time_epochms)
+        else:
+            process_one_log_stream_general(client, ner, group_name, stream_name, first_event_time, last_event_time,
+                                region, s3client, bucket, prefix, new_start, end_time_epochms)
+        end_time_epochms = new_start
+
+    if end_time_epochms > start_time_epochms:
+        if group_name.startswith("/aws/rds"):
+            process_one_log_stream_sql(client, ner, group_name, stream_name, first_event_time, last_event_time,
+                                region, s3client, bucket, prefix, start_time_epochms, end_time_epochms)
+        else:
+            process_one_log_stream_general(client, ner, group_name, stream_name, first_event_time, last_event_time,
+                                region, s3client, bucket, prefix, start_time_epochms, end_time_epochms)
 try:
     from time import time
     import boto3
