@@ -196,7 +196,8 @@ def process_one_log_stream_sql(client, ner, group_name, stream_name, first_event
         print(f"File Name = {fn}")
         obj_name = prefix.lstrip('/').rstrip('/') + '/' + fn.lstrip('/')
         print(f"Object Name = {obj_name}")
-        response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(end_time_epochms)}})
+        response = s3client.upload_file(fn, bucket, obj_name,
+                ExtraArgs={"Metadata": {"infinsnap_start": str(start_time_epochms), "infinsnap_end": str(end_time_epochms)}})
 
 def process_one_log_stream_general(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
