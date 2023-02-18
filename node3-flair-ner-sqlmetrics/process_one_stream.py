@@ -190,13 +190,13 @@ def process_one_log_stream_sql(client, ner, group_name, stream_name, first_event
         else:
             break
     if all_messages:
-        fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '-' + str(first_event_time) + '.json'
+        fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '-' + str(end_time_epochms) + '.json'
         with open(fn, 'w') as fp:
             json.dump(all_messages, fp, ensure_ascii=True, indent=4, sort_keys=True)
         print(f"File Name = {fn}")
         obj_name = prefix.lstrip('/').rstrip('/') + '/' + fn.lstrip('/')
         print(f"Object Name = {obj_name}")
-        response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(first_event_time)}})
+        response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(end_time_epochms)}})
 
 def process_one_log_stream_general(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
@@ -265,13 +265,13 @@ def process_one_log_stream_general(client, ner, group_name, stream_name, first_e
         else:
             break
     if all_messages:
-        fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '-' + str(first_event_time) + '.json'
+        fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '-' + str(end_time_epochms) + '.json'
         with open(fn, 'w') as fp:
             json.dump(all_messages, fp, ensure_ascii=True, indent=4, sort_keys=True)
         print(f"File Name = {fn}")
         obj_name = prefix.lstrip('/').rstrip('/') + '/' + fn.lstrip('/')
         print(f"Object Name = {obj_name}")
-        response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(first_event_time)}})
+        response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(end_time_epochms)}})
 
 def process_one_log_stream(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
