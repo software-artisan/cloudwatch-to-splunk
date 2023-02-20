@@ -132,6 +132,8 @@ try:
         CloudWatchClient = object
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('--aws_profile_iam_roles_anywhere', required=False, default='subscriber_infinlogs_iam_roles_anywhere', 
+                        help='Relies on aws profile named "subscriber_infinlogs_iam_roles_anywhere" which uses IAM roles anywhere to access the cloudwatch logs in the subscriber account.  This profile needs to be setup before running this script')
     parser.add_argument('--bucket', help='output bucket name', required=True)
     parser.add_argument('--prefix', help='output prefix', required=True)
 
