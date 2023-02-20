@@ -20,6 +20,7 @@ def aws_cloudwatch_url(region, log_group, log_stream, dt):
     ])
 
 def add_log_line(dt, msg, person, all_messages, log_group, log_stream, region):
+    print(f"add_log_line: Entered. date={dt}, person={person}, msg={msg}, log_group={log_group}, log_stream={log_stream}")
     cw_url = aws_cloudwatch_url(region, log_group, log_stream, dt)
     if person in all_messages:
         all_messages[person].append((dt.timestamp(), cw_url, msg))
@@ -128,6 +129,8 @@ def parse_timestamp(t):
 def process_one_log_stream_sql(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
     print(f"process_one_log_stream_sql: Entered. grp={group_name}, strm={stream_name}", flush=True)
+    print(f"  first_event_time={first_event_time}, last_event_time={last_event_time} output=s3://{bucket}/{prefix}", flush=True)
+    print(f"  start_time_epochs={start_time_epochms}, end_time_epochs={end_time_epochms}", flush=True)
     total_len = 0
     all_messages = {}
     unique_keys = dict()
@@ -152,7 +155,7 @@ def process_one_log_stream_sql(client, ner, group_name, stream_name, first_event
             extract_metrics(event, unique_keys)
         print(f"Finished extracting metrics. Unique keys from metrics search={len(unique_keys)}")
         # unique keys is a dict that maps the extracted unique keys to an array of the following tuple:
-        # (timestamp of line in epoch ms, message line, array of numbers extracted from line, array of timestamps extracted from line)
+        # [(timestamp of line in epoch ms, message line, array of numbers extracted from line, array of timestamps extracted from line)]
 
         for key, val in unique_keys.items():
             print(f"unique_key={key}: Number of lines with this unique key={len(val)}")
@@ -171,8 +174,10 @@ def process_one_log_stream_sql(client, ner, group_name, stream_name, first_event
                     print(f"Metrics ORG={s_entry_word} :: {inp[idx]}")
                 elif entry['entity_group'] == 'PER':
                     print(f"Metrics PER={s_entry_word} :: {inp[idx]}")
+                    nms = s_entry_word.split()
                     for oi in unique_keys[inp[idx]]:
-                        alen = add_log_line(oi[0], oi[1], s_entry_word, all_messages, group_name, stream_name, region)
+                        for nmse in nms:
+                            alen = add_log_line(datetime.fromtimestamp(oi[0]/1000, timezone.utc), oi[1], nmse, all_messages, group_name, stream_name, region)
                     total_len = total_len + alen
                 elif entry['entity_group'] == 'MISC':
                     print(f"Metrics MISC={s_entry_word} :: {inp[idx]}")
@@ -187,17 +192,20 @@ def process_one_log_stream_sql(client, ner, group_name, stream_name, first_event
         else:
             break
     if all_messages:
-        fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '-' + str(first_event_time) + '.json'
+        fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '-' + str(end_time_epochms) + '.json'
         with open(fn, 'w') as fp:
             json.dump(all_messages, fp, ensure_ascii=True, indent=4, sort_keys=True)
         print(f"File Name = {fn}")
         obj_name = prefix.lstrip('/').rstrip('/') + '/' + fn.lstrip('/')
         print(f"Object Name = {obj_name}")
-        response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(first_event_time)}})
+        response = s3client.upload_file(fn, bucket, obj_name,
+                ExtraArgs={"Metadata": {"infinsnap_start": str(start_time_epochms), "infinsnap_end": str(end_time_epochms)}})
 
 def process_one_log_stream_general(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
     print(f"process_one_log_stream_general: Entered. grp={group_name}, strm={stream_name}", flush=True)
+    print(f"  first_event_time={first_event_time}, last_event_time={last_event_time} output=s3://{bucket}/{prefix}", flush=True)
+    print(f"  start_time_epochs={start_time_epochms}, end_time_epochs={end_time_epochms}", flush=True)
 
     print('------------------------------ Begin Creating Huggingface SequenceTagger ------------------', flush=True)
     tagger = SequenceTagger.load("flair/chunk-english").to('cuda')
@@ -229,8 +237,6 @@ def process_one_log_stream_general(client, ner, group_name, stream_name, first_e
             # run NER through every line
             msg_list.append(msg)
             timestamp_list.append(tm)
-            print(f"TEMPORARILY DONE AFTER ONE MESSAGE")
-            break
         print(f"Finished flair model. total_len={total_len}, all_messages len={len(all_messages)}")
 
         if not msg_list:
@@ -264,25 +270,38 @@ def process_one_log_stream_general(client, ner, group_name, stream_name, first_e
         else:
             break
     if all_messages:
-        fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '-' + str(first_event_time) + '.json'
+        fn = group_name.replace('/', '_') + '-' + stream_name.replace('/', '_') + '-' + str(end_time_epochms) + '.json'
         with open(fn, 'w') as fp:
             json.dump(all_messages, fp, ensure_ascii=True, indent=4, sort_keys=True)
         print(f"File Name = {fn}")
         obj_name = prefix.lstrip('/').rstrip('/') + '/' + fn.lstrip('/')
         print(f"Object Name = {obj_name}")
-        response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(first_event_time)}})
+        response = s3client.upload_file(fn, bucket, obj_name, ExtraArgs={"Metadata": {"infinsnap": str(end_time_epochms)}})
 
 def process_one_log_stream(client, ner, group_name, stream_name, first_event_time, last_event_time,
                             region, s3client, bucket, prefix, start_time_epochms, end_time_epochms):
     print(f"process_one_log_stream: Entered. grp={group_name}, strm={stream_name}", flush=True)
     print(f"  first_event_time={first_event_time}, last_event_time={last_event_time} output=s3://{bucket}/{prefix}", flush=True)
     print(f"  start_time_epochs={start_time_epochms}, end_time_epochs={end_time_epochms}", flush=True)
-    if group_name.startswith("/aws/rds"):
-        process_one_log_stream_sql(client, ner, group_name, stream_name, first_event_time, last_event_time,
-                            region, s3client, bucket, prefix, start_time_epochms, end_time_epochms)
-    else:
-        process_one_log_stream_general(client, ner, group_name, stream_name, first_event_time, last_event_time,
-                            region, s3client, bucket, prefix, start_time_epochms, end_time_epochms)
+    ten_minutes = (10 * 60 * 1000)
+    new_start = start_time_epochms
+    while (end_time_epochms - start_time_epochms) > ten_minutes:
+        new_start = end_time_epochms - ten_minutes
+        if group_name.startswith("/aws/rds"):
+            process_one_log_stream_sql(client, ner, group_name, stream_name, first_event_time, last_event_time,
+                                region, s3client, bucket, prefix, new_start, end_time_epochms)
+        else:
+            process_one_log_stream_general(client, ner, group_name, stream_name, first_event_time, last_event_time,
+                                region, s3client, bucket, prefix, new_start, end_time_epochms)
+        end_time_epochms = new_start
+
+    if end_time_epochms > start_time_epochms:
+        if group_name.startswith("/aws/rds"):
+            process_one_log_stream_sql(client, ner, group_name, stream_name, first_event_time, last_event_time,
+                                region, s3client, bucket, prefix, start_time_epochms, end_time_epochms)
+        else:
+            process_one_log_stream_general(client, ner, group_name, stream_name, first_event_time, last_event_time,
+                                region, s3client, bucket, prefix, start_time_epochms, end_time_epochms)
 try:
     from time import time
     import boto3
